@@ -1,31 +1,22 @@
-import { startTransition, useEffect, useState } from 'react';
-import { About } from './components/About';
-import { CaseDialog } from './components/CaseDialog';
-import { Contact } from './components/Contact';
+import { lazy, startTransition, Suspense, useEffect, useState } from 'react';
 import { Credibility } from './components/Credibility';
-import { Demo } from './components/Demo';
-import { Experience } from './components/Experience';
-import { Expertise } from './components/Expertise';
-import { Footer } from './components/Footer';
 import { Hero } from './components/Hero';
 import { Nav } from './components/Nav';
-import { Work } from './components/Work';
 import { useCaseRouter } from './hooks/useCaseRouter';
 import { useReveal } from './hooks/useReveal';
+
+// Below-the-fold sections ship as a separate chunk (one module, two mount points).
+const RestMain = lazy(() => import('./Rest').then((m) => ({ default: m.RestMain })));
+const RestAfter = lazy(() => import('./Rest').then((m) => ({ default: m.RestAfter })));
 
 export function App() {
   const router = useCaseRouter();
   useReveal();
 
-  // Hero and highlights render first; the rest follows in an interruptible
-  // transition so the initial render never blocks input.
+  // The first screen (prerendered at build time) hydrates first; the rest
+  // follows in an interruptible transition so it never blocks input.
   const [rest, setRest] = useState(false);
   useEffect(() => startTransition(() => setRest(true)), []);
-  useEffect(() => {
-    if (!rest) return;
-    const id = window.location.hash.slice(1);
-    if (id && !id.startsWith('work/')) document.getElementById(id)?.scrollIntoView();
-  }, [rest]);
 
   return (
     <>
@@ -34,21 +25,19 @@ export function App() {
       </a>
       <Nav />
       <main id="main" tabIndex={-1}>
-        <Hero onOpenCase={router.open} />
+        <Hero />
         <Credibility />
         {rest && (
-          <>
-            <Work morphSlug={router.morphSlug} openSlug={router.openSlug} onOpen={router.open} />
-            <Demo />
-            <Expertise />
-            <Experience />
-            <About />
-            <Contact />
-          </>
+          <Suspense fallback={null}>
+            <RestMain router={router} />
+          </Suspense>
         )}
       </main>
-      {rest && <Footer />}
-      <CaseDialog slug={router.openSlug} onClose={router.close} onNavigate={router.navigate} />
+      {rest && (
+        <Suspense fallback={null}>
+          <RestAfter router={router} />
+        </Suspense>
+      )}
     </>
   );
 }

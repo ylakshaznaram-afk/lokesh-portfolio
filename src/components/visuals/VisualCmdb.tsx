@@ -28,7 +28,7 @@ export function VisualCmdb({ label }: { label: string }) {
       <Mono x={36} y={40}>
         CI RELATIONSHIPS · ILLUSTRATIVE SUBSET
       </Mono>
-      <circle cx={nodes.s2.x} cy={nodes.s2.y} r="74" fill="rgba(252,211,77,0.06)" />
+      <circle cx={nodes.s2.x} cy={nodes.s2.y} r="74" fill="rgba(240,213,140,0.06)" />
 
       {edges.map(([a, b, l]) => {
         const A = nodes[a];
@@ -41,7 +41,7 @@ export function VisualCmdb({ label }: { label: string }) {
         const my = (y1 + y2) / 2;
         return (
           <g key={a + b}>
-            <Arrow d={`M${x1} ${y1} C${x1} ${my} ${x2} ${my} ${x2} ${y2}`} color={hot ? 'rgba(252,211,77,0.5)' : 'rgba(167,139,250,0.4)'} />
+            <Arrow d={`M${x1} ${y1} C${x1} ${my} ${x2} ${my} ${x2} ${y2}`} color={hot ? 'rgba(240,213,140,0.5)' : 'rgba(141,190,255,0.4)'} />
             {l && (
               <Mono x={(x1 + x2) / 2 + (x1 === x2 ? 8 : 0)} y={my - 4} anchor={x1 === x2 ? 'start' : 'middle'} size={9.5}>
                 {l}
@@ -83,7 +83,7 @@ export function VisualCmdb({ label }: { label: string }) {
 
       {/* Change panel */}
       <Panel x={470} y={28} w={302} h={464} r={20} />
-      <Mono x={492} y={58} fill={C.cyan}>
+      <Mono x={492} y={58} fill={C.mint}>
         CHANGE REQUEST
       </Mono>
       <T x={492} y={84} size={18} weight={620}>
@@ -123,7 +123,7 @@ export function VisualCmdb({ label }: { label: string }) {
         [
           ['Technical review', 'approved', C.mint],
           ['CAB', 'pending', C.amber],
-          ['Implementation', 'not started', C.text3],
+          ['Change manager', 'not started', C.text3],
         ] as const
       ).map(([k, v, c], i) => (
         <g key={k}>
@@ -143,7 +143,7 @@ export function VisualCmdb({ label }: { label: string }) {
         y={392}
         w={262}
         side="bot"
-        tint="rgba(103,232,249,0.35)"
+        tint="rgba(142,240,204,0.35)"
         lines={['app-srv-02 supports Payments Portal.', 'CAB approval is still pending.']}
       />
     </Frame>

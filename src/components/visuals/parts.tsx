@@ -2,18 +2,18 @@
 import { useId, type ReactNode } from 'react';
 
 export const C = {
-  bg: '#0b0e14',
-  panel: '#11151d',
-  panel2: '#171d27',
-  line: 'rgba(255,255,255,0.08)',
-  line2: 'rgba(255,255,255,0.14)',
-  text: '#F4F7FB',
-  text2: '#AAB4C3',
-  text3: '#8d98aa',
-  cyan: '#67E8F9',
-  violet: '#A78BFA',
-  mint: '#86EFAC',
-  amber: '#FCD34D',
+  bg: '#0c1016',
+  panel: '#121821',
+  panel2: '#171e29',
+  line: 'rgba(243,245,247,0.08)',
+  line2: 'rgba(243,245,247,0.14)',
+  text: '#F3F5F7',
+  text2: '#A5AFBD',
+  text3: '#8a95a5',
+  mint: '#8EF0CC',
+  ice: '#8DBEFF',
+  amber: '#F0D58C',
+  coral: '#F5A58F',
 };
 
 export function Frame({ label, title, children }: { label: string; title: string; children: ReactNode }) {
@@ -23,7 +23,7 @@ export function Frame({ label, title, children }: { label: string; title: string
       <title>{title}</title>
       <defs>
         <pattern id={`dots-${uid}`} width="20" height="20" patternUnits="userSpaceOnUse">
-          <circle cx="1" cy="1" r="1" fill="rgba(255,255,255,0.05)" />
+          <circle cx="1" cy="1" r="1" fill="rgba(243,245,247,0.05)" />
         </pattern>
       </defs>
       <rect width="800" height="520" fill={C.bg} />
@@ -72,8 +72,8 @@ export function Bubble({
   tag?: { text: string; color: string };
 }) {
   const h = 18 + lines.length * 19;
-  const fill = side === 'user' ? 'rgba(167,139,250,0.14)' : C.panel2;
-  const stroke = tint ?? (side === 'user' ? 'rgba(167,139,250,0.35)' : C.line2);
+  const fill = side === 'user' ? 'rgba(141,190,255,0.14)' : C.panel2;
+  const stroke = tint ?? (side === 'user' ? 'rgba(141,190,255,0.35)' : C.line2);
   return (
     <g>
       <rect x={x} y={y} width={w} height={h} rx="13" fill={fill} stroke={stroke} />

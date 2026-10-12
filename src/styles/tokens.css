@@ -1,30 +1,36 @@
 :root {
-  /* Color */
-  --bg: #080a0f;
-  --surface-1: #11151d;
-  --surface-2: #171d27;
-  --surface-3: #1e2531;
-  --text: #f4f7fb;
-  --text-2: #aab4c3;
-  --text-3: #8d98aa;
-  --cyan: #67e8f9;
-  --violet: #a78bfa;
-  --mint: #86efac;
-  --amber: #fcd34d;
-  --line: rgba(255, 255, 255, 0.075);
-  --line-2: rgba(255, 255, 255, 0.13);
-  --cyan-soft: rgba(103, 232, 249, 0.12);
-  --violet-soft: rgba(167, 139, 250, 0.12);
+  /* Colour — obsidian & graphite with mint / ice accents */
+  --bg: #080b10;
+  --bg-raised: #0c1016;
+  --surface: #121821;
+  --surface-2: #171e29;
+  --surface-3: #1e2632;
+  --text: #f3f5f7;
+  --text-2: #a5afbd;
+  --text-3: #8a95a5;
+  --mint: #8ef0cc;
+  --ice: #8dbeff;
+  --mint-soft: rgba(142, 240, 204, 0.12);
+  --ice-soft: rgba(141, 190, 255, 0.12);
+  --line: rgba(243, 245, 247, 0.08);
+  --line-2: rgba(243, 245, 247, 0.14);
+  --line-3: rgba(243, 245, 247, 0.22);
+
+  /* Semantic conversation states (demo + case-study visuals) */
+  --state-request: #8dbeff;
+  --state-clarify: #f0d58c;
+  --state-resolve: #8ef0cc;
+  --state-fallback: #a5afbd;
+  --state-handoff: #f5a58f;
 
   /* Type */
-  --f-display: 'Bricolage Grotesque Variable', 'Inter Variable', system-ui, sans-serif;
+  --f-display: 'Bricolage Grotesque', 'Inter Variable', system-ui, sans-serif;
   --f-body: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --f-mono: 'JetBrains Mono Variable', ui-monospace, 'SFMono-Regular', Menlo, monospace;
 
-  --t-hero: clamp(2.5rem, 0.9rem + 4.6vw, 5.2rem);
-  --t-h2: clamp(2.1rem, 1.3rem + 3vw, 3.9rem);
-  --t-h3: clamp(1.35rem, 1.1rem + 0.9vw, 1.85rem);
-  --t-lead: clamp(1.05rem, 0.98rem + 0.35vw, 1.25rem);
+  --t-h2: clamp(2.2rem, 1.25rem + 3.4vw, 4.4rem);
+  --t-h3: clamp(1.35rem, 1.05rem + 1vw, 1.9rem);
+  --t-lead: clamp(1.06rem, 0.98rem + 0.4vw, 1.3rem);
   --t-body: 1rem;
   --t-small: 0.875rem;
   --t-mono: 0.75rem;
@@ -39,27 +45,28 @@
   --s-7: 48px;
   --s-8: 64px;
   --s-9: 96px;
-  --s-10: 144px;
-  --section: clamp(88px, 6vw + 56px, 160px);
-  --gutter: clamp(16px, 3.4vw, 40px);
-  --gap: clamp(12px, 1.3vw, 20px);
+  --s-10: 128px;
+  --section: clamp(84px, 5vw + 52px, 140px);
+  --gutter: clamp(16px, 3.6vw, 48px);
+  --gap: clamp(12px, 1.25vw, 20px);
 
   /* Shape & depth */
-  --r-sm: 10px;
-  --r-md: 16px;
-  --r-lg: 24px;
+  --r-xs: 8px;
+  --r-sm: 12px;
+  --r-md: 18px;
+  --r-lg: 28px;
   --r-pill: 999px;
-  --shadow-1: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 20px 40px -24px rgba(0, 0, 0, 0.7);
-  --shadow-2: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 30px 60px -28px rgba(0, 0, 0, 0.85);
+  --shadow-soft: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 24px 48px -28px rgba(0, 0, 0, 0.75);
+  --shadow-lift: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 40px 80px -36px rgba(0, 0, 0, 0.9), 0 12px 24px -16px rgba(0, 0, 0, 0.6);
 
   /* Motion */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-io: cubic-bezier(0.65, 0, 0.35, 1);
   --d-fast: 160ms;
   --d-med: 320ms;
-  --d-slow: 600ms;
+  --d-slow: 640ms;
 
-  --max: 1280px;
+  --max: 1320px;
   color-scheme: dark;
 }
 

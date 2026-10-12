@@ -1,6 +1,6 @@
 import { Arrow, Bubble, C, Frame, Mono, Panel, Pill, T } from './parts';
 
-const S = { request: C.cyan, clarify: C.violet, resolve: C.mint, handoff: C.amber };
+const S = { request: C.ice, clarify: C.amber, resolve: C.mint, handoff: C.coral };
 
 function Node({ x, y, w, h = 34, text, color, mono }: { x: number; y: number; w: number; h?: number; text: string; color: string; mono?: boolean }) {
   return (
@@ -35,13 +35,13 @@ export function VisualNlu({ label }: { label: string }) {
       {/* tree edges */}
       {intents.map((it) => (
         <g key={it.id}>
-          <Arrow d={`M146 252 C162 252 160 ${it.y + 17} 178 ${it.y + 17}`} color="rgba(103,232,249,0.4)" />
+          <Arrow d={`M146 252 C162 252 160 ${it.y + 17} 178 ${it.y + 17}`} color="rgba(142,240,204,0.4)" />
           {it.leaves.map((_, j) => (
             <Arrow key={j} d={`M316 ${it.y + 17} C330 ${it.y + 17} 326 ${it.y - 22 + j * 40 + 15} 342 ${it.y - 22 + j * 40 + 15}`} />
           ))}
         </g>
       ))}
-      <Arrow d="M91 270 V352" color="rgba(170,180,195,0.45)" dashed />
+      <Arrow d="M91 270 V352" color="rgba(165,175,189,0.45)" dashed />
 
       <Node x={36} y={234} w={110} h={36} text="Utterance" color={S.request} />
       <Node x={36} y={352} w={110} h={32} text="fallback" color={C.text2} mono />
@@ -65,8 +65,8 @@ export function VisualNlu({ label }: { label: string }) {
       {(
         [
           ['Request', S.request],
-          ['Clarification', S.clarify],
-          ['Resolution', S.resolve],
+          ['Clarify', S.clarify],
+          ['Resolve', S.resolve],
           ['Handoff', S.handoff],
         ] as const
       ).map(([t, c], i) => (
@@ -80,7 +80,7 @@ export function VisualNlu({ label }: { label: string }) {
 
       {/* chat */}
       <Panel x={490} y={28} w={282} h={464} r={20} />
-      <circle cx="514" cy="56" r="5" fill={C.cyan} />
+      <circle cx="514" cy="56" r="5" fill={C.mint} />
       <T x={528} y={61} size={14} weight={600}>
         IT Support
       </T>
@@ -92,12 +92,12 @@ export function VisualNlu({ label }: { label: string }) {
       <Mono x={756} y={104} anchor="end" fill={S.request} size={10}>
         REQUEST
       </Mono>
-      <Bubble x={546} y={112} w={210} side="user" tint={S.request} lines={['I’m locked out of my laptop']} />
+      <Bubble x={546} y={112} w={210} side="user" tint={S.request} lines={['I can’t sign in']} />
 
       <Mono x={506} y={178} fill={S.clarify} size={10}>
         CLARIFY
       </Mono>
-      <Bubble x={506} y={186} w={220} side="bot" tint={S.clarify} lines={['Is it your main work', 'account or one app?']} />
+      <Bubble x={506} y={186} w={220} side="bot" tint={S.clarify} lines={['Is it your main work', 'account, or one app?']} />
 
       <Bubble x={604} y={254} w={152} side="user" lines={['Main account']} />
 

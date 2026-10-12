@@ -1,7 +1,10 @@
-import { useEffect, useLayoutEffect, useRef } from 'react';
-import { caseStudies } from '../data/content';
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
+import { art } from '../assets/visuals/art';
+import { projects, type Project } from '../data/content';
 import { Icon } from './Icon';
-import { CaseVisual, ILLUSTRATIVE } from './visuals';
+import { CaseVisual } from './visuals';
+import { JourneyVisual } from './work/JourneyVisual';
+import { PanelsVisual } from './work/PanelsVisual';
 
 interface Props {
   slug: string | null;
@@ -9,44 +12,75 @@ interface Props {
   onNavigate: (slug: string) => void;
 }
 
+/** Large visual at the top of a case study — the same artwork family as the card. */
+function LeadVisual({ project }: { project: Project }) {
+  if (project.visual === 'panels') return <PanelsVisual label={project.visualAlt} large />;
+  if (project.visual === 'journey') return <JourneyVisual label={project.visualAlt} large />;
+  const a = project.visual === 'ribbon' ? (art.ribbon.wide ?? art.ribbon.main) : art.constellation.main;
+  return (
+    <img
+      className="case__lead-img"
+      src={a.src}
+      srcSet={a.srcSet}
+      sizes="(min-width: 1180px) 1080px, 94vw"
+      width={a.width}
+      height={a.height}
+      alt={project.visualAlt}
+      decoding="async"
+    />
+  );
+}
+
 export function CaseDialog({ slug, onClose, onNavigate }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const index = caseStudies.findIndex((c) => c.slug === slug);
-  const study = index >= 0 ? caseStudies[index] : null;
+  const lastSlug = useRef<string | null>(null);
+  const index = projects.findIndex((p) => p.slug === slug);
+  const project = index >= 0 ? projects[index] : null;
 
   // Layout effect so showModal() happens inside the view-transition update.
   useLayoutEffect(() => {
     const d = ref.current;
     if (!d) return;
-    if (study && !d.open) {
+    if (project && !d.open) {
       returnFocus.current = document.activeElement as HTMLElement | null;
       d.showModal();
       document.documentElement.classList.add('is-locked');
       d.querySelector<HTMLElement>('.icon-btn--close')?.focus();
-    } else if (!study && d.open) {
+    } else if (!project && d.open) {
       d.close();
       document.documentElement.classList.remove('is-locked');
       const target = returnFocus.current;
-      if (target && document.contains(target)) target.focus({ preventScroll: true });
+      if (target && target !== document.body && document.contains(target)) {
+        target.focus({ preventScroll: true });
+      } else {
+        // Opened from a direct link: return the reader to that project's card.
+        const card = lastSlug.current ? document.getElementById(`project-${lastSlug.current}-title`)?.closest('article') : null;
+        card?.scrollIntoView({ block: 'center', behavior: 'instant' as ScrollBehavior });
+        card?.querySelector<HTMLElement>('.project__cta')?.focus({ preventScroll: true });
+      }
     }
-  }, [study]);
+  }, [project]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 });
+    // Previous/Next inside the open dialog: move focus to the new title so it is announced and visible.
+    if (slug && lastSlug.current && lastSlug.current !== slug) document.getElementById('case-title')?.focus({ preventScroll: true });
+    if (slug) lastSlug.current = slug;
   }, [slug]);
 
   useEffect(() => () => document.documentElement.classList.remove('is-locked'), []);
 
-  const prev = caseStudies[(index - 1 + caseStudies.length) % caseStudies.length];
-  const next = caseStudies[(index + 1) % caseStudies.length];
+  const prev = projects[(index - 1 + projects.length) % projects.length];
+  const next = projects[(index + 1) % projects.length];
+  const cs = project?.caseStudy;
 
   return (
     <dialog
       ref={ref}
-      className="case-dialog"
-      aria-labelledby="case-dialog-title"
+      className="case"
+      aria-labelledby="case-title"
       onCancel={(e) => {
         e.preventDefault();
         onClose();
@@ -55,20 +89,20 @@ export function CaseDialog({ slug, onClose, onNavigate }: Props) {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      {study && (
-        <div className="case-dialog__sheet" ref={scrollRef}>
-          <div className="case-dialog__bar">
+      {project && cs && (
+        <div className="case__sheet" ref={scrollRef}>
+          <div className="case__bar">
             <p className="mono">
-              Case study {study.index} / 0{caseStudies.length} · {study.context} experience
+              {project.index} / 0{projects.length} · {project.employer}
             </p>
-            <div className="case-dialog__nav">
+            <div className="case__nav">
               <button type="button" className="icon-btn" onClick={() => onNavigate(prev.slug)}>
                 <Icon name="chevronL" />
-                <span className="visually-hidden">Previous case study: {prev.title}</span>
+                <span className="visually-hidden">Previous project: {prev.title}</span>
               </button>
               <button type="button" className="icon-btn" onClick={() => onNavigate(next.slug)}>
                 <Icon name="chevronR" />
-                <span className="visually-hidden">Next case study: {next.title}</span>
+                <span className="visually-hidden">Next project: {next.title}</span>
               </button>
               <button type="button" className="icon-btn icon-btn--close" onClick={onClose}>
                 <Icon name="close" />
@@ -77,45 +111,43 @@ export function CaseDialog({ slug, onClose, onNavigate }: Props) {
             </div>
           </div>
 
-          <header className="case-dialog__head">
-            <h2 id="case-dialog-title" className="case-dialog__title">
-              {study.title}
+          <div className="case__head">
+            <p className="kicker">Case study</p>
+            <h2 id="case-title" className="case__title" tabIndex={-1}>
+              {project.title}
             </h2>
-            <p className="case-dialog__problem">{study.problem}</p>
-            <ul className="case-card__tech" aria-label="Technologies">
-              {study.tech.map((t) => (
-                <li key={t} className="chip">
-                  {t}
-                </li>
-              ))}
-            </ul>
-          </header>
+            <p className="case__summary">{project.summary}</p>
+          </div>
 
-          <figure className="case-dialog__media">
-            <div className="case-dialog__visual" style={{ viewTransitionName: `case-${study.slug}` }}>
-              <CaseVisual study={study} />
+          <figure className="case__lead">
+            <div className="case__lead-frame" style={{ viewTransitionName: `case-${project.slug}` }}>
+              <LeadVisual project={project} />
             </div>
-            <figcaption className="figure-caption">{ILLUSTRATIVE} Synthetic example data.</figcaption>
+            {(project.visual === 'panels' || project.visual === 'journey') && (
+              <figcaption className="caption">Illustrative interface · sample data</figcaption>
+            )}
           </figure>
 
-          <div className="case-dialog__story">
-            <Block n="01" title="Context">
-              <p>{study.detail.context}</p>
+          <div className="case__body">
+            <Block title="Overview">
+              <p>{cs.overview}</p>
             </Block>
-            <Block n="02" title="User need">
-              <p>{study.detail.userNeed}</p>
+            <Block title="Challenge">
+              <p>{cs.challenge}</p>
             </Block>
-            <Block n="03" title="My contribution">
+            <Block title="My role">
               <ul className="ticks">
-                {study.detail.contribution.map((c) => (
-                  <li key={c}>{c}</li>
+                {cs.role.map((r) => (
+                  <li key={r}>{r}</li>
                 ))}
               </ul>
             </Block>
-            <Block n="04" title="Flow and architecture" wide>
-              <p className="mono case-dialog__note">Simplified flow, based on the documented scope</p>
+            <Block title="Approach">
+              <p>{cs.approach}</p>
+            </Block>
+            <Block title="Implementation" wide>
               <ol className="flow">
-                {study.detail.flow.map((f, i) => (
+                {cs.implementation.map((f, i) => (
                   <li key={f.step} className="flow__step">
                     <span className="flow__num mono">{String(i + 1).padStart(2, '0')}</span>
                     <strong>{f.step}</strong>
@@ -123,41 +155,57 @@ export function CaseDialog({ slug, onClose, onNavigate }: Props) {
                   </li>
                 ))}
               </ol>
-            </Block>
-            <Block n="05" title="Testing and edge cases">
-              <ul className="ticks">
-                {study.detail.testing.map((c) => (
-                  <li key={c}>{c}</li>
+              <figure className="case__figure">
+                <div className="case__figure-frame">
+                  <CaseVisual project={project} />
+                </div>
+                <figcaption className="caption">Illustrative interface · sample data</figcaption>
+              </figure>
+              <ul className="case__stack" aria-label="Technologies">
+                {cs.stack.map((t) => (
+                  <li key={t} className="tag">
+                    {t}
+                  </li>
                 ))}
               </ul>
             </Block>
-            <Block n="06" title="Delivered capability">
-              <p>{study.detail.result}</p>
-              <p className="case-dialog__fine">Described as delivered scope — no performance metrics are claimed.</p>
+            {cs.testing.length > 0 && (
+              <Block title="Testing & edge cases">
+                <ul className="ticks">
+                  {cs.testing.map((t) => (
+                    <li key={t}>{t}</li>
+                  ))}
+                </ul>
+              </Block>
+            )}
+            <Block title="Delivered capabilities">
+              <ul className="ticks">
+                {cs.delivered.map((d) => (
+                  <li key={d}>{d}</li>
+                ))}
+              </ul>
             </Block>
           </div>
 
-          <footer className="case-dialog__foot">
-            <button type="button" className="case-dialog__next" onClick={() => onNavigate(next.slug)}>
-              <span className="mono">Next case study</span>
-              <span className="case-dialog__next-title">
-                {next.title} <Icon name="arrow" size={22} />
+          <div className="case__foot">
+            <button type="button" className="case__next" onClick={() => onNavigate(next.slug)}>
+              <span className="mono">Next project</span>
+              <span className="case__next-title">
+                {next.title} <Icon name="arrow" size={24} />
               </span>
             </button>
-          </footer>
+          </div>
         </div>
       )}
     </dialog>
   );
 }
 
-function Block({ n, title, children, wide }: { n: string; title: string; children: React.ReactNode; wide?: boolean }) {
+function Block({ title, children, wide }: { title: string; children: ReactNode; wide?: boolean }) {
   return (
-    <section className={`story-block ${wide ? 'story-block--wide' : ''}`}>
-      <h3 className="story-block__title">
-        <span className="mono">{n}</span> {title}
-      </h3>
-      <div className="story-block__body">{children}</div>
+    <section className={`case__block ${wide ? 'case__block--wide' : ''}`}>
+      <h3 className="case__block-title">{title}</h3>
+      <div className="case__block-body">{children}</div>
     </section>
   );
 }

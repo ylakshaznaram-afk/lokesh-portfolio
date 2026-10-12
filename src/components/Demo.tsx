@@ -50,6 +50,8 @@ export function Demo() {
   const choose = (label: string, next: string) => {
     if (typing) return;
     wantFocus.current = optsRef.current?.contains(document.activeElement) ?? false;
+    // The options unmount while the reply is "typed"; park focus on their group so it isn't lost.
+    if (wantFocus.current) optsRef.current?.focus({ preventScroll: true });
     if (next === '__reset') {
       reset();
       return;
@@ -105,19 +107,24 @@ export function Demo() {
     <section className="section demo" id="demo" aria-labelledby="demo-title">
       <div className="container">
         <header className="section-head">
-          <p className="eyebrow section-head__eyebrow">Interactive concept demo</p>
+          <p className="kicker">Conversation design</p>
           <h2 id="demo-title" className="section-head__title">
             How I shape a conversation.
           </h2>
           <p className="section-head__lead">
-            A scripted simulation with synthetic data, running entirely in your browser. It isn’t connected to any employer system — no tickets are created and no one is contacted.
+            Pick a scenario and steer it — including the wrong turns. It runs in your browser with sample data; no real tickets or systems are involved.
           </p>
         </header>
 
-        <div className="demo__grid">
-          <div className="demo__side">
+        <div className="demo__shell reveal">
+          <div className="demo__panel demo__panel--control">
+            <p className="demo__badge">
+              <span aria-hidden="true" className="demo__badge-dot" />
+              Interactive concept • Sample data
+            </p>
+
             <fieldset className="demo__scenarios">
-              <legend className="mono">Choose a scenario</legend>
+              <legend className="mono">Scenario</legend>
               {scenarios.map((s, i) => (
                 <button
                   key={s.id}
@@ -133,7 +140,7 @@ export function Demo() {
             </fieldset>
 
             <div className="demo__states">
-              <p className="mono">Design states</p>
+              <p className="mono">Workflow stage</p>
               <ol>
                 {STATES.map((st) => {
                   const isCurrent = current.state === st;
@@ -150,18 +157,16 @@ export function Demo() {
                   );
                 })}
               </ol>
-              <p className="demo__hint">
-                <span className="mono">{stateMeta[current.state].label}</span> {stateMeta[current.state].hint}
-              </p>
+              <p className="demo__hint">{stateMeta[current.state].hint}</p>
             </div>
           </div>
 
-          <div className="demo__chat card">
+          <div className="demo__panel demo__panel--chat">
             <div className="demo__chat-head">
               <span className="demo__avatar" aria-hidden="true" />
               <div>
                 <p className="demo__chat-title">Concept assistant</p>
-                <p className="mono">Simulation · synthetic data</p>
+                <p className="mono">Simulation</p>
               </div>
               <button type="button" className="btn btn--ghost btn--sm demo__reset" onClick={() => reset()}>
                 <Icon name="reset" size={16} /> Reset
@@ -181,19 +186,29 @@ export function Demo() {
               )}
             </div>
 
-            <div className="demo__options" ref={optsRef} aria-label="Reply options" role="group">
-              {!typing &&
-                (current.options.length ? (
-                  current.options.map((o) => (
-                    <button key={o.label} type="button" className="demo__opt" onClick={() => choose(o.label, o.next)}>
-                      {o.label}
+            <div className="demo__options" ref={optsRef} aria-label="Reply options" role="group" tabIndex={-1}>
+              <p className="mono demo__options-label">Your reply</p>
+              <div className="demo__options-row">
+                {!typing &&
+                  (current.options.length ? (
+                    current.options.map((o) => (
+                      <button key={o.label} type="button" className="demo__opt" onClick={() => choose(o.label, o.next)}>
+                        {o.label}
+                      </button>
+                    ))
+                  ) : (
+                    <button
+                      type="button"
+                      className="demo__opt demo__opt--reset"
+                      onClick={() => {
+                        wantFocus.current = true;
+                        reset();
+                      }}
+                    >
+                      <Icon name="reset" size={16} /> Start over
                     </button>
-                  ))
-                ) : (
-                  <button type="button" className="demo__opt demo__opt--reset" onClick={() => reset()}>
-                    <Icon name="reset" size={16} /> Start over
-                  </button>
-                ))}
+                  ))}
+              </div>
             </div>
           </div>
         </div>

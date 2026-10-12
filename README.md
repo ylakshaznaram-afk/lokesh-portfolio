@@ -1,22 +1,24 @@
 # Lokesh Gadchanda — Portfolio
 
-"The Conversation Engine": a single-page portfolio for a ServiceNow Developer & Conversational Designer.
-React + TypeScript + Vite, plain CSS design tokens, and a lazy-loaded three.js hero.
+A name-led personal portfolio for a ServiceNow Developer & Conversational Designer: modern dark, three original 3D sculptures, and an asymmetric bento of project work.
+React + TypeScript + Vite, plain CSS design tokens, and plain three.js (lazy-loaded).
 
 ```bash
 npm install
-npm run dev       # local dev server
-npm run build     # type-check + production build → dist/
-npm run preview   # serve the production build
+npm run dev              # local dev server (also serves the 3D lab at /lab.html)
+npm run build            # type-check + production build → dist/
+npm run preview          # serve the production build
+npm run render:visuals   # re-render the static 3D fallbacks (dev server must be running)
+npm run render:og        # re-render og-image.png and the PNG favicons
 ```
 
-`dist/` is a static site with relative asset paths (`base: './'`), so it can be hosted from a domain root or a sub-path.
+The two render scripts need Playwright (`npm i -D playwright`, or point `PLAYWRIGHT_MODULE` at an installed copy). They are only needed after changing a 3D scene or the brand mark — the generated files are committed.
 
 ## Deployment
 
 Live at **https://ylakshaznaram-afk.github.io/lokesh-portfolio/**.
 
-`.github/workflows/deploy.yml` builds the site and deploys it to GitHub Pages on every push to `main`. It can also be run manually from the Actions tab. One-time setup: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+`.github/workflows/deploy.yml` builds the site and deploys it to GitHub Pages on every push to `main` (or manually from the Actions tab). `dist/` uses relative asset paths (`base: './'`), so it works under the `/lokesh-portfolio/` sub-path or any other location. Routing is hash-based (`#work`, `#work/<case-study>`), so direct links and refreshes work on static hosting.
 
 If the site moves to another domain, update `og:url`, `og:image`, `twitter:image` and `canonical` in `index.html`.
 
@@ -24,29 +26,28 @@ If the site moves to another domain, update `og:url`, `og:image`, `twitter:image
 
 | Path | What |
 | --- | --- |
-| `src/data/content.ts` | **All professional content**: profile, highlights, case studies, expertise, experience, education. Edit here only. |
-| `src/data/demo.ts` | Scripted, synthetic flows for the interactive concept demo. |
-| `src/engine/` | Conversation Engine: `EngineStatic.tsx` (SVG, first paint + fallback), `engine3d.ts` (WebGL, lazy), `HeroEngine.tsx` (mode switching + accessible controls). |
-| `src/components/visuals/` | Original SVG illustrations for the four case studies (synthetic data). |
+| `src/data/content.ts` | **All professional content** — profile, highlights, projects and case studies, ribbon stages, constellation topology, expertise, experience, education. Edit here only. |
+| `src/data/demo.ts` | Scripted, synthetic flows for the interactive conversation demo. |
+| `src/three/` | The 3D system: `kit.ts` (shared materials, light rig, light-travel shader, helpers), `prism.ts` / `ribbon.ts` / `constellation.ts` (the sculptures), `activation.ts` (only the most visible scene renders), `capability.ts` (when live 3D is offered), `types.ts` (scene contract). |
+| `src/components/Visual3D.tsx` | Hosts a sculpture: static image first, live canvas on top when allowed, HTML labels/controls positioned from the scene. |
+| `src/assets/visuals/` | Static WebP renders of each sculpture (generated from the scenes' still poses) and their hotspot coordinates. |
+| `src/components/work/` | Project visuals: ribbon + stage controls, constellation + component controls, and the two HTML/CSS 3D compositions (conversation panels, HR journey). |
+| `src/components/visuals/` | Detailed SVG illustrations shown inside the case studies (synthetic data). |
 | `src/styles/` | `tokens.css` (colour, type, spacing, motion), `base.css`, `sections.css`. |
-| `public/` | Favicons, social preview image (`og-image.png`), robots.txt. |
+| `public/` | Self-hosted display font (+ OFL licence), favicons, social preview image, robots.txt. |
+| `lab.html`, `src/lab/` | Dev-only harness for the sculptures (not in the production build). |
 
 ## Before publishing — content dependencies
 
 1. **Confirm current employment.** The Deloitte role shows `May 2024 – Present`, as listed on the resume. Update `experience[0].end` in `content.ts` if it has changed.
-2. **Safran India role details.** The brief gave title and dates only, so no contributions are shown. Add 2–3 resume-backed points to `experience[3].points` if wanted.
-3. **Resume download (optional).** No resume file was supplied, so no download button is shown. Add the PDF to `public/` and set `profile.resumeUrl` (for example `'./Lokesh-Gadchanda-Resume.pdf'`). The button appears automatically.
-4. **Screenshots (optional).** All case-study visuals are recreated illustrations, labelled as such. Approved production screenshots can replace them in `CaseVisual`.
+2. **Safran India role details.** Only title and dates were supplied, so no contributions are shown. Add 2–3 resume-backed points to `experience[3].points` if wanted.
+3. **Resume download (optional).** No resume file was supplied, so no download buttons are shown. Add the PDF to `public/` and set `profile.resumeUrl` (e.g. `'./Lokesh-Gadchanda-Resume.pdf'`); the hero and contact buttons appear automatically.
+4. **Cognizant testing details (optional).** No testing work was documented for the CMDB project, so its case study has no "Testing & edge cases" section. Add items to `testing` for that project in `content.ts` to show one.
+5. **Screenshots (optional).** Project visuals are original sculptures and recreated interfaces with sample data, captioned as such. Approved production screenshots can replace the case-study illustrations in `src/components/visuals/`.
 
 ## Behaviour notes
 
-- **3D vs static engine.** The WebGL scene loads after first paint on wide screens with capable hardware. The static SVG is used on screens under 900px, with `prefers-reduced-motion`, Save-Data, ≤2 cores or <4 GB memory, software WebGL renderers, when early frames are slow, or after WebGL context loss. Rendering pauses offscreen, in background tabs and while a case study is open. Pixel ratio is capped at 1.75.
-- **QA override.** `?engine=3d` forces the WebGL scene (and disables the slow-frame fallback). `?engine=static` forces the SVG.
-- **Deep links.** Each case study opens at `#work/<slug>`, for example `#work/nlu-it-self-service`. The browser Back button closes it.
-- **Demo.** It runs entirely in the browser with synthetic data. It has no text input, so it never collects personal information.
-
-## Verified (local production build)
-
-- Automated Playwright checks for navigation, all four case studies (open, next, close, Escape, Back, deep link, focus return), all three demo scenarios including fallback and handoff, keyboard use, copy-email feedback, external links, mobile menu, reduced motion and no console errors.
-- Layouts at 1440×900, 834×1112 and 390×844 with no horizontal overflow.
-- Lighthouse 12 (localhost, headless Chromium): mobile Performance 98 (LCP 2.2 s, TBT 30 ms, CLS 0), desktop 100; Accessibility, Best Practices and SEO 100. Headless Chromium has no GPU, so these desktop numbers use the static engine. WebGL cost on real GPUs should be checked on target devices after deployment.
+- **Live 3D vs static.** Every sculpture shows its static render first. The live scene loads after first paint on viewports ≥768px with capable hardware, and is skipped for `prefers-reduced-motion`, Save-Data, <4 cores or <4 GB memory, software WebGL renderers, slow early frames and WebGL context loss. Only the most visible sculpture renders; the others pause, and nothing renders while a case study is open or the tab is hidden. Pixel ratio is capped at 1.75.
+- **QA override.** `?visuals=3d` forces live scenes (and disables the slow-frame fallback); `?visuals=static` forces images.
+- **Deep links.** Each case study opens at `#work/<slug>` (e.g. `#work/cmdb-service-workflows`); Back closes it.
+- **Demo.** Runs entirely in the browser with sample data and has no text input, so it never collects personal information.

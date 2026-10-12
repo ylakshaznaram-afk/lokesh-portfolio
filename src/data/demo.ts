@@ -42,13 +42,12 @@ const handoff: DemoNode = {
   bot: ['I’ll pass this to the support team with a summary of what we’ve covered, so you don’t have to repeat yourself.'],
   card: {
     kind: 'handoff',
-    title: 'Example handoff state',
+    title: 'Handoff summary',
     rows: [
       ['Queue', 'Service Desk (sample)'],
       ['Context', 'Conversation recap attached'],
-      ['Status', 'Simulated — not sent'],
     ],
-    note: 'Simulation only — no agent has been contacted.',
+    note: 'Sample only — no agent has been contacted.',
   },
   options: [],
 };
@@ -82,9 +81,9 @@ export const scenarios: Scenario[] = [
         bot: ['Thanks. The quickest route is self-service reset — here’s what would happen next.'],
         card: {
           kind: 'steps',
-          title: 'Suggested next step',
+          title: 'Suggested next steps',
           steps: ['Open the self-service reset page', 'Verify your identity', 'Choose a new password'],
-          note: 'Simulated guidance — no reset was started.',
+          note: 'Sample only — nothing was sent or created.',
         },
         options: [
           { label: 'That didn’t work', next: 'handoff' },
@@ -93,10 +92,10 @@ export const scenarios: Scenario[] = [
       },
       signinApp: {
         state: 'clarify',
-        bot: ['Which kind of app is it? That tells me who owns the access.'],
+        bot: ['Which app is it? Each app’s access is managed by its own team.'],
         options: [
-          { label: 'Collaboration tool', next: 'access' },
-          { label: 'I’m not sure', next: 'handoff' },
+          { label: 'An app I’ve never had access to', next: 'access' },
+          { label: 'An app I normally use', next: 'handoff' },
         ],
       },
       access: {
@@ -113,9 +112,9 @@ export const scenarios: Scenario[] = [
         bot: ['Got it. Access requests usually need a manager’s approval. Here’s the path.'],
         card: {
           kind: 'steps',
-          title: 'Suggested next step',
+          title: 'Suggested next steps',
           steps: ['Pick the application from the catalog', 'Add a short business reason', 'Your manager approves'],
-          note: 'Simulated guidance — no request was created.',
+          note: 'Sample only — nothing was sent or created.',
         },
         options: [{ label: 'Start over', next: '__reset' }],
       },
@@ -123,9 +122,20 @@ export const scenarios: Scenario[] = [
         state: 'clarify',
         bot: ['Are you their manager? Requests on someone else’s behalf usually go through their manager.'],
         options: [
-          { label: 'Yes, I’m their manager', next: 'accessMe' },
+          { label: 'Yes, I’m their manager', next: 'accessTeamManager' },
           { label: 'No', next: 'handoff' },
         ],
+      },
+      accessTeamManager: {
+        state: 'resolve',
+        bot: ['Got it — as their manager, you can request it on their behalf.'],
+        card: {
+          kind: 'steps',
+          title: 'Suggested next steps',
+          steps: ['Pick the application from the catalog', 'Choose “on behalf of” and select your teammate', 'Add a short business reason'],
+          note: 'Sample only — nothing was sent or created.',
+        },
+        options: [{ label: 'Start over', next: '__reset' }],
       },
       unclear: {
         state: 'fallback',
@@ -146,7 +156,7 @@ export const scenarios: Scenario[] = [
     nodes: {
       start: {
         state: 'greeting',
-        bot: ['I can look up a ticket. Which one? (These are sample tickets.)'],
+        bot: ['I can look up a ticket. Which one?'],
         options: [
           { label: 'INC-DEMO-0042', next: 't42' },
           { label: 'INC-DEMO-0107', next: 't107' },
@@ -156,7 +166,7 @@ export const scenarios: Scenario[] = [
       t42: {
         state: 'resolve',
         intent: 'ticket_status',
-        bot: ['Here’s the latest on that sample ticket.'],
+        bot: ['Found it — INC-DEMO-0042. Here’s the latest.'],
         card: {
           kind: 'ticket',
           title: 'INC-DEMO-0042',
@@ -166,7 +176,7 @@ export const scenarios: Scenario[] = [
             ['Group', 'Desk Support (sample)'],
             ['Updated', '2 hours ago'],
           ],
-          note: 'Synthetic record.',
+          note: 'Sample record.',
         },
         options: [
           { label: 'Add a comment', next: 'comment' },
@@ -177,7 +187,7 @@ export const scenarios: Scenario[] = [
       t107: {
         state: 'resolve',
         intent: 'ticket_status',
-        bot: ['That sample ticket is resolved. Is the issue actually fixed for you?'],
+        bot: ['INC-DEMO-0107 is marked resolved. Is the issue actually fixed for you?'],
         card: {
           kind: 'ticket',
           title: 'INC-DEMO-0107',
@@ -187,7 +197,7 @@ export const scenarios: Scenario[] = [
             ['Group', 'Network (sample)'],
             ['Updated', 'Yesterday'],
           ],
-          note: 'Synthetic record.',
+          note: 'Sample record.',
         },
         options: [
           { label: 'Yes, all good', next: 'done' },
@@ -196,7 +206,6 @@ export const scenarios: Scenario[] = [
       },
       unknown: {
         state: 'clarify',
-        intent: 'ticket_status',
         bot: ['No problem. Roughly what was it about? I’ll narrow it down.'],
         options: [
           { label: 'A printer', next: 't42' },
@@ -214,13 +223,13 @@ export const scenarios: Scenario[] = [
       },
       comment: {
         state: 'clarify',
-        bot: ['In the real flow I’d ask for your comment here. For this demo, pick a sample one.'],
+        bot: ['What would you like to add? Pick a sample comment.'],
         options: [{ label: '“Still offline this morning”', next: 'commented' }],
       },
       commented: {
         state: 'resolve',
-        bot: ['Your comment would be added to the ticket and the assigned group notified.'],
-        card: { kind: 'steps', title: 'What would happen', steps: ['Comment added to INC-DEMO-0042', 'Assignment group notified'], note: 'Simulation — nothing was updated.' },
+        bot: ['I’ll add that to INC-DEMO-0042 and notify the assigned group.'],
+        card: { kind: 'steps', title: 'What would happen', steps: ['Comment added to INC-DEMO-0042', 'Assignment group notified'], note: 'Sample only — nothing was sent or created.' },
         options: [{ label: 'Start over', next: '__reset' }],
       },
       urgent: {
@@ -241,13 +250,13 @@ export const scenarios: Scenario[] = [
       },
       reopened: {
         state: 'resolve',
-        bot: ['In production, the ticket would move back to In progress with your note attached.'],
-        card: { kind: 'steps', title: 'What would happen', steps: ['INC-DEMO-0107 → In progress', 'Network group notified'], note: 'Simulation — nothing was updated.' },
+        bot: ['I’ll reopen INC-DEMO-0107 and let the Network group know it’s back.'],
+        card: { kind: 'steps', title: 'What would happen', steps: ['INC-DEMO-0107 → In progress', 'Network group notified'], note: 'Sample only — nothing was sent or created.' },
         options: [{ label: 'Start over', next: '__reset' }],
       },
       done: {
         state: 'resolve',
-        bot: ['Great — nothing else to do. Anything else?'],
+        bot: ['Great — glad it’s fixed. INC-DEMO-0107 stays resolved.'],
         options: [{ label: 'Start over', next: '__reset' }],
       },
       handoff,
@@ -279,7 +288,7 @@ export const scenarios: Scenario[] = [
       leavePlanned: {
         state: 'resolve',
         bot: ['For planned leave, here’s the usual path.'],
-        card: { kind: 'steps', title: 'Suggested next step', steps: ['Read the leave policy article', 'Submit a leave request', 'Track status in Employee Center'], note: 'Sample guidance — not a real HR policy.' },
+        card: { kind: 'steps', title: 'Suggested next steps', steps: ['Read the leave policy article', 'Submit a leave request', 'Track status in Employee Center'], note: 'Sample guidance — not a real HR policy.' },
         options: [
           { label: 'I have a question about the policy', next: 'handoff' },
           { label: 'Start over', next: '__reset' },
@@ -288,7 +297,7 @@ export const scenarios: Scenario[] = [
       leaveUnplanned: {
         state: 'resolve',
         bot: ['Hope you’re okay. For unplanned leave, the first step is letting your manager know.'],
-        card: { kind: 'steps', title: 'Suggested next step', steps: ['Notify your manager', 'Record the absence', 'HR follows up if documents are needed'], note: 'Sample guidance — not a real HR policy.' },
+        card: { kind: 'steps', title: 'Suggested next steps', steps: ['Notify your manager', 'Record the absence', 'HR follows up if documents are needed'], note: 'Sample guidance — not a real HR policy.' },
         options: [{ label: 'Start over', next: '__reset' }],
       },
       payroll: {
@@ -302,8 +311,8 @@ export const scenarios: Scenario[] = [
       },
       payslip: {
         state: 'resolve',
-        bot: ['Here’s where a payslip explainer would live.'],
-        card: { kind: 'steps', title: 'Suggested next step', steps: ['Open “Reading your payslip” (sample article)', 'Still unclear? Raise an HR case'], note: 'Sample guidance.' },
+        bot: ['This article walks through each line of your payslip.'],
+        card: { kind: 'steps', title: 'Suggested next steps', steps: ['Open “Reading your payslip” (sample article)', 'Still unclear? Raise an HR case'], note: 'Sample guidance — not a real HR policy.' },
         options: [{ label: 'Start over', next: '__reset' }],
       },
       unclear: {
@@ -327,11 +336,15 @@ export const scenarios: Scenario[] = [
       },
       docsLetter: {
         state: 'resolve',
-        bot: ['That would be routed to the document team as a request.'],
-        card: { kind: 'steps', title: 'Suggested next step', steps: ['Choose the letter type', 'Request is routed to HR', 'Track it in Employee Center'], note: 'Simulation — no request was created.' },
+        bot: ['I’ll send this to the HR documents team as a letter request.'],
+        card: { kind: 'steps', title: 'Suggested next steps', steps: ['Choose the letter type', 'Request is routed to HR', 'Track it in Employee Center'], note: 'Sample only — nothing was sent or created.' },
         options: [{ label: 'Start over', next: '__reset' }],
       },
-      handoff: { ...handoff, bot: ['I’ll connect you with an HR specialist and share what we’ve covered.'] },
+      handoff: {
+        ...handoff,
+        bot: ['I’ll connect you with an HR specialist and share what we’ve covered.'],
+        card: { ...handoff.card!, rows: [['Queue', 'HR Service Delivery (sample)'], ['Context', 'Conversation recap attached']] },
+      },
     },
   },
 ];

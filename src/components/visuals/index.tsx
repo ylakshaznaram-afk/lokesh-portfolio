@@ -1,20 +1,20 @@
-import type { CaseStudy } from '../../data/content';
+import type { Project } from '../../data/content';
 import { VisualCmdb } from './VisualCmdb';
 import { VisualEnterprise } from './VisualEnterprise';
 import { VisualHr } from './VisualHr';
 import { VisualNlu } from './VisualNlu';
 
-export function CaseVisual({ study }: { study: CaseStudy }) {
-  switch (study.visual) {
-    case 'enterprise':
-      return <VisualEnterprise label={study.visualAlt} />;
-    case 'nlu':
-      return <VisualNlu label={study.visualAlt} />;
-    case 'cmdb':
-      return <VisualCmdb label={study.visualAlt} />;
-    case 'hr':
-      return <VisualHr label={study.visualAlt} />;
+/** Detailed illustrative interface shown in each case study's Implementation section. */
+export function CaseVisual({ project }: { project: Project }) {
+  const label = `Illustrative interface for ${project.title}, with sample data.`;
+  switch (project.visual) {
+    case 'ribbon':
+      return <VisualEnterprise label={label} />;
+    case 'panels':
+      return <VisualNlu label={label} />;
+    case 'constellation':
+      return <VisualCmdb label={label} />;
+    case 'journey':
+      return <VisualHr label={label} />;
   }
 }
-
-export const ILLUSTRATIVE = 'Illustrative interface — not a production screenshot.';
