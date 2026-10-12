@@ -10,7 +10,15 @@ npm run build     # type-check + production build → dist/
 npm run preview   # serve the production build
 ```
 
-`dist/` is a static site with relative asset paths (`base: './'`), so it can be hosted from a domain root or a sub-path (GitHub Pages, Netlify, Vercel, S3, etc.).
+`dist/` is a static site with relative asset paths (`base: './'`), so it can be hosted from a domain root or a sub-path.
+
+## Deployment
+
+Live at **https://ylakshaznaram-afk.github.io/Implement-weather-modeling/**.
+
+`.github/workflows/deploy-portfolio.yml` builds `portfolio/` and deploys it to GitHub Pages on every push to `main` that touches `portfolio/`. It can also be run manually from the Actions tab. One-time setup: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+
+If the site moves to another domain, update `og:url`, `og:image`, `twitter:image` and `canonical` in `index.html`.
 
 ## Where things live
 
@@ -28,8 +36,7 @@ npm run preview   # serve the production build
 1. **Confirm current employment.** The Deloitte role shows `May 2024 – Present`, as listed on the resume. Update `experience[0].end` in `content.ts` if it has changed.
 2. **Safran India role details.** The brief gave title and dates only, so no contributions are shown. Add 2–3 resume-backed points to `experience[3].points` if wanted.
 3. **Resume download (optional).** No resume file was supplied, so no download button is shown. Add the PDF to `public/` and set `profile.resumeUrl` (for example `'./Lokesh-Gadchanda-Resume.pdf'`). The button appears automatically.
-4. **Absolute social URLs.** Once the domain is known, set absolute `og:image`/`twitter:image` URLs and add `og:url` plus `<link rel="canonical">` in `index.html`. Some social platforms ignore relative preview images.
-5. **Screenshots (optional).** All case-study visuals are recreated illustrations, labelled as such. Approved production screenshots can replace them in `CaseVisual`.
+4. **Screenshots (optional).** All case-study visuals are recreated illustrations, labelled as such. Approved production screenshots can replace them in `CaseVisual`.
 
 ## Behaviour notes
 
