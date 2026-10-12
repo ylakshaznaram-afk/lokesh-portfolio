@@ -14,9 +14,9 @@ npm run preview   # serve the production build
 
 ## Deployment
 
-Live at **https://ylakshaznaram-afk.github.io/Implement-weather-modeling/**.
+Live at **https://ylakshaznaram-afk.github.io/lokesh-portfolio/**.
 
-`.github/workflows/deploy-portfolio.yml` builds `portfolio/` and deploys it to GitHub Pages on every push to `main` that touches `portfolio/`. It can also be run manually from the Actions tab. One-time setup: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+`.github/workflows/deploy.yml` builds the site and deploys it to GitHub Pages on every push to `main`. It can also be run manually from the Actions tab. One-time setup: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 
 If the site moves to another domain, update `og:url`, `og:image`, `twitter:image` and `canonical` in `index.html`.
 
