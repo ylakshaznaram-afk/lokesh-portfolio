@@ -28,6 +28,11 @@ export interface SceneOptions {
   onSlow?: () => void;
   /** Called after the first frame has been drawn. */
   onReady?: () => void;
+  /**
+   * Called when the visitor clicks/taps a pickable part of the sculpture (one of
+   * hotspotIds), so the host can select it exactly like its HTML control.
+   */
+  onPick?: (id: string) => void;
   /** Max device pixel ratio (default 1.75). */
   maxDpr?: number;
 }
@@ -48,4 +53,4 @@ export interface SceneModule {
   hotspotIds: readonly string[];
 }
 
-export type SceneKey = 'prism' | 'ribbon' | 'constellation';
+export type SceneKey = 'prism' | 'ribbon' | 'constellation' | 'graph';

@@ -28,7 +28,7 @@ If the site moves to another domain, update `og:url`, `og:image`, `twitter:image
 | --- | --- |
 | `src/data/content.ts` | **All professional content** — profile, highlights, projects and case studies, ribbon stages, constellation topology, expertise, experience, education. Edit here only. |
 | `src/data/demo.ts` | Scripted, synthetic flows for the interactive conversation demo. |
-| `src/three/` | The 3D system: `kit.ts` (shared materials, light rig, light-travel shader, helpers), `prism.ts` / `ribbon.ts` / `constellation.ts` (the sculptures), `activation.ts` (only the most visible scene renders), `capability.ts` (when live 3D is offered), `types.ts` (scene contract). |
+| `src/three/` | The 3D system: `kit.ts` (shared materials, light rig, light-travel shader, helpers), `prism.ts` / `ribbon.ts` / `constellation.ts` / `graph.ts` (the sculptures), `activation.ts` (only the most visible scene renders), `capability.ts` (when live 3D is offered), `types.ts` (scene contract). |
 | `src/components/Visual3D.tsx` | Hosts a sculpture: static image first, live canvas on top when allowed, HTML labels/controls positioned from the scene. |
 | `src/assets/visuals/` | Static WebP renders of each sculpture (generated from the scenes' still poses) and their hotspot coordinates. |
 | `src/components/work/` | Project visuals: ribbon + stage controls, constellation + component controls, and the two HTML/CSS 3D compositions (conversation panels, HR journey). |
@@ -47,7 +47,8 @@ If the site moves to another domain, update `og:url`, `og:image`, `twitter:image
 
 ## Behaviour notes
 
-- **Live 3D vs static.** Every sculpture shows its static render first. The live scene loads after first paint on viewports ≥768px with capable hardware, and is skipped for `prefers-reduced-motion`, Save-Data, <4 cores or <4 GB memory, software WebGL renderers, slow early frames and WebGL context loss. Only the most visible sculpture renders; the others pause, and nothing renders while a case study is open or the tab is hidden. Pixel ratio is capped at 1.75.
+- **Live 3D vs static.** Every sculpture shows its static render first. The live scene loads after first paint on capable hardware (phones included), and is skipped for `prefers-reduced-motion`, Save-Data, <4 cores or <4 GB memory, software WebGL renderers, slow early frames and WebGL context loss. Only the most visible sculpture renders; the others pause, and nothing renders while a case study is open or the tab is hidden. Pixel ratio is capped at 1.75.
+- **Interaction.** Live sculptures can be dragged to turn (they spring back to their composed pose); clicking a ribbon gate or a constellation component selects it like its button; tapping the hero prism sends a light pulse from Request to Answer. The demo's Conversation Graph follows the chat stage by stage. Project illustrations turn toward the mouse.
 - **QA override.** `?visuals=3d` forces live scenes (and disables the slow-frame fallback); `?visuals=static` forces images.
 - **Deep links.** Each case study opens at `#work/<slug>` (e.g. `#work/cmdb-service-workflows`); Back closes it.
 - **Demo.** Runs entirely in the browser with sample data and has no text input, so it never collects personal information.

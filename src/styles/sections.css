@@ -1439,7 +1439,7 @@ html.is-locked {
    ========================================================= */
 .demo__shell {
   display: grid;
-  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  grid-template-columns: minmax(300px, 400px) minmax(0, 1fr);
   border-radius: var(--r-lg);
   border: 1px solid var(--line-2);
   background: var(--surface);
@@ -2364,4 +2364,95 @@ html.is-locked {
 }
 .footer__links a:hover {
   color: var(--text);
+}
+
+/* ------------------------------------------------------------------ */
+/* Direct manipulation                                                 */
+/* ------------------------------------------------------------------ */
+
+/* Live sculptures can be turned by dragging; touch keeps vertical scrolling. */
+.v3d[data-live='true'] .v3d__canvas {
+  cursor: grab;
+  touch-action: pan-y;
+}
+.v3d[data-live='true'] .v3d__canvas:active {
+  cursor: grabbing;
+}
+.v3d__hint {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line-2);
+  background: rgba(10, 14, 20, 0.62);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: var(--text-2);
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  animation: v3d-hint-in 600ms var(--ease-out) 900ms both;
+  transition: opacity 500ms var(--ease-out), transform 500ms var(--ease-out);
+}
+.v3d__hint svg {
+  color: var(--mint);
+}
+.v3d__hint[data-hidden='true'] {
+  opacity: 0;
+  transform: translateY(4px);
+}
+@keyframes v3d-hint-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* Pointer-tracked depth on the CSS 3D project compositions (vars set by Work.tsx). */
+.project__visual::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  border-radius: inherit;
+  background: radial-gradient(520px circle at var(--sheen-x, 50%) var(--sheen-y, 30%), rgba(243, 245, 247, 0.07), transparent 62%);
+  opacity: 0;
+  transition: opacity 500ms var(--ease-out);
+}
+.project__visual.is-tilting::after {
+  opacity: 1;
+}
+.project__visual.is-tilting .panels__scene,
+.project__visual.is-tilting .journey__scene {
+  transition-duration: 260ms;
+}
+.project__visual.is-tilting .panels__scene {
+  transform: rotateY(calc(-14deg + var(--tilt-x, 0) * 11deg)) rotateX(calc(7deg - var(--tilt-y, 0) * 8deg)) rotateZ(-1deg);
+}
+.project__visual.is-tilting .journey__scene {
+  transform: rotateX(calc(14deg - var(--tilt-y, 0) * 7deg)) rotateY(calc(-8deg + var(--tilt-x, 0) * 10deg));
+}
+
+/* Conversation graph: full-bleed inside the demo's control panel. */
+.demo__graph {
+  margin: -6px -26px -4px;
+  border-block: 1px solid var(--line);
+  background:
+    radial-gradient(60% 70% at 50% 45%, rgba(141, 190, 255, 0.06), transparent 70%),
+    #0b0f15;
+}
+.demo__graph .v3d__spot--label {
+  font-size: 0.625rem;
+  padding: 4px 7px;
+}
+@media (max-width: 767px) {
+  .demo__graph {
+    display: none;
+  }
 }

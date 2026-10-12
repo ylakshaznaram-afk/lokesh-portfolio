@@ -42,5 +42,9 @@ export function deviceSupports3D(): boolean {
   return ok;
 }
 
-/** Viewports where live 3D is offered (static images below this). */
-export const LIVE_3D_MEDIA = '(min-width: 768px)';
+/**
+ * Viewports where live 3D is offered. Every size, phones included: hardware
+ * checks above, reduced motion, the slow-frame watchdog and the one-scene-at-a-
+ * time activation manager keep weaker devices on the static images.
+ */
+export const LIVE_3D_MEDIA = 'all';

@@ -20,6 +20,8 @@ interface Props {
   priority?: boolean;
   /** Extra media query in which the square composition is used (e.g. a tall frame on wide screens). */
   squareMedia?: string;
+  /** Short gesture hint shown on the live scene until the visitor first touches it. */
+  hint?: string;
   hotspots?: readonly HotspotSpec[];
   /**
    * 'label' — quiet text tags (decorative, hidden from assistive tech).
@@ -53,6 +55,7 @@ export function Visual3D({
   sizes,
   priority = false,
   squareMedia,
+  hint,
   hotspots = [],
   hotspotStyle = 'label',
   selected = null,
@@ -68,6 +71,7 @@ export function Visual3D({
   const squareWide = useMediaQuery(squareMedia ?? 'not all');
   const [failed, setFailed] = useState(false);
   const [live, setLive] = useState<LiveState>('off');
+  const [touched, setTouched] = useState(false);
   // The prerendered HTML has no canvas; only add one after hydration.
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -81,6 +85,8 @@ export function Visual3D({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const handleRef = useRef<SceneHandle | null>(null);
   const spotRefs = useRef(new Map<string, HTMLElement>());
+  const pickRef = useRef(onSelect);
+  pickRef.current = onSelect;
   const selRef = useRef(selected);
   const hovRef = useRef(hovered);
   selRef.current = selected;
@@ -131,6 +137,7 @@ export function Visual3D({
           onHotspots: place,
           onReady: () => !disposed && setLive('ready'),
           onSlow: forced3D ? undefined : fail,
+          onPick: (id) => pickRef.current?.(id),
         });
         handle.setSelected(selRef.current);
         handle.setHovered(hovRef.current);
@@ -200,7 +207,15 @@ export function Visual3D({
             decoding="async"
           />
         </picture>
-        {allowLive && <canvas ref={canvasRef} className="v3d__canvas" aria-hidden="true" />}
+        {allowLive && <canvas ref={canvasRef} className="v3d__canvas" aria-hidden="true" onPointerDown={() => setTouched(true)} />}
+        {isLive && hint && (
+          <span className="v3d__hint mono" aria-hidden="true" data-hidden={touched ? 'true' : undefined}>
+            <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 12h16M4 12l4-4M4 12l4 4M20 12l-4-4M20 12l-4 4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            {hint}
+          </span>
+        )}
 
         {hotspots.map((h) => {
           const p = variant.hotspots[h.id];

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { scenarios, stateMeta, type DemoCard, type DemoState, type Scenario } from '../data/demo';
 import { useReducedMotion } from '../hooks/useMotion';
 import { Icon } from './Icon';
+import { Visual3D } from './Visual3D';
 
 interface Msg {
   id: number;
@@ -34,12 +35,15 @@ export function Demo() {
   const optsRef = useRef<HTMLDivElement>(null);
   const timer = useRef<number>(0);
   const wantFocus = useRef(false);
+  // A stage picked on the 3D graph: show its guidance until the conversation moves on.
+  const [peek, setPeek] = useState<DemoState | null>(null);
 
   const current = scenario.nodes[node];
 
   const reset = useCallback(
     (s: Scenario = scenario) => {
       window.clearTimeout(timer.current);
+      setPeek(null);
       setTyping(false);
       setConv(initial(s));
       setVisited(new Set(['greeting']));
@@ -57,6 +61,7 @@ export function Demo() {
       return;
     }
     const target = scenario.nodes[next];
+    setPeek(null);
     setConv((c) => ({ ...c, msgs: [...c.msgs, { id: ++uid, from: 'user', text: label }] }));
     setTyping(true);
     timer.current = window.setTimeout(
@@ -139,6 +144,18 @@ export function Demo() {
               ))}
             </fieldset>
 
+            <Visual3D
+              scene="graph"
+              className="demo__graph"
+              alt="Conversation graph: six connected stages — greeting, intent, clarify, next step, fallback and handoff — with the current stage lit."
+              sizes="(min-width: 1100px) 400px, (min-width: 768px) 36vw, 92vw"
+              hint="Drag to turn"
+              hotspots={STATES.map((st) => ({ id: st, label: stateMeta[st].label }))}
+              selected={current.state}
+              hovered={peek}
+              onSelect={(id) => setPeek(id as DemoState)}
+            />
+
             <div className="demo__states">
               <p className="mono">Workflow stage</p>
               <ol>
@@ -157,7 +174,10 @@ export function Demo() {
                   );
                 })}
               </ol>
-              <p className="demo__hint">{stateMeta[current.state].hint}</p>
+              <p className="demo__hint">
+                {peek && peek !== current.state && <strong>{stateMeta[peek].label}: </strong>}
+                {stateMeta[peek ?? current.state].hint}
+              </p>
             </div>
           </div>
 

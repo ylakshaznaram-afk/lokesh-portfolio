@@ -38,6 +38,7 @@ import {
   PerspectiveCamera,
   PlaneGeometry,
   PMREMGenerator,
+  Raycaster,
   Scene,
   ShaderMaterial,
   Shape,
@@ -46,6 +47,8 @@ import {
   Vector2,
   Vector3,
   WebGLRenderer,
+  type Intersection,
+  type Sprite,
 } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { mergeVertices, toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -56,6 +59,7 @@ import {
   createLoop,
   createRenderer,
   disposeObject,
+  dragRotate,
   ease,
   fitDistance,
   glowSprite,
@@ -402,7 +406,8 @@ function profileTube(geo: TubeGeometry, path: CurvePath<Vector3>, segments: numb
  * opaque on purpose (it is drawn in the opaque pass, so the smoked glass
  * refracts it); the halo is additive. Vertices are lifted with the form they
  * belong to (uLiftA for the glass section, uLiftB for the metal section) so
- * the channel stays continuous when a form rises on selection.
+ * the channel stays continuous when a form rises on selection. uTap / uTap2
+ * are the brighter "sent" packets a visitor launches by tapping (-1 = none).
  */
 function channelMaterial(halo: boolean) {
   return new ShaderMaterial({
@@ -412,6 +417,8 @@ function channelMaterial(halo: boolean) {
       uBase: { value: new Color(halo ? 0x000000 : 0x2f8a72) },
       uHead: { value: -1 },
       uHead2: { value: -1 },
+      uTap: { value: -1 },
+      uTap2: { value: -1 },
       uLength: { value: 0.2 },
       uIntensity: { value: halo ? 0.7 : 2.4 },
       uA1: { value: 0.5 },
@@ -445,6 +452,8 @@ function channelMaterial(halo: boolean) {
       uniform vec3 uBase;
       uniform float uHead;
       uniform float uHead2;
+      uniform float uTap;
+      uniform float uTap2;
       uniform float uLength;
       uniform float uIntensity;
       uniform float uA1;
@@ -462,10 +471,13 @@ function channelMaterial(halo: boolean) {
       }
       void main() {
         float p = max(packet(uHead), packet(uHead2));
+        // a visitor's message: brighter, a touch whiter than the ambient rhythm
+        float tp = max(packet(uTap), packet(uTap2)) * uIntensity * 1.45;
         float onMetal = smoothstep(uA1, uB0, vUv.x);
         float sel = mix(uSelA, uSelB, onMetal);
         // light cools from mint (request) to ice (answer) as it resolves
         vec3 tint = mix(uColor, uAnswer, onMetal * 0.55);
+        vec3 sent = mix(tint, vec3(1.0), 0.28);
         float steady = sel * 0.3 + uArrive * onMetal * 0.5;
         // behind / inside the smoked glass the filament burns brighter so it survives the tint
         float veiled = 1.0 - smoothstep(uB0 - 0.05, uB0, vUv.x);
@@ -473,9 +485,10 @@ function channelMaterial(halo: boolean) {
         float birth = smoothstep(0.0, 0.16, vUv.x);
         ${
           halo
-            ? `float a = (p * uIntensity + steady * 0.6) * pow(vNdv, 2.0) * birth;
-        gl_FragColor = vec4(tint * a, a);`
-            : `vec3 col = uBase * (1.0 + sel * 1.8) * (0.35 + 0.65 * birth) + tint * (p * uIntensity + steady) * birth;
+            ? `float e = p * uIntensity + steady * 0.6;
+        float a = (e + tp) * pow(vNdv, 2.0) * birth;
+        gl_FragColor = vec4(mix(tint, sent, tp / max(e + tp, 1e-4)) * a, a);`
+            : `vec3 col = uBase * (1.0 + sel * 1.8) * (0.35 + 0.65 * birth) + tint * (p * uIntensity + steady) * birth + sent * tp * birth;
         col *= (0.7 + 0.3 * vNdv) * (1.0 + veiled * 1.2);
         gl_FragColor = vec4(col, 1.0);`
         }
@@ -499,8 +512,24 @@ const GAP2 = 4.37; // second packet trails the first by CYCLE - GAP2 seconds
 const STILL_T = 3.5; // rest pose: one packet resolving on the metal, one inside the glass
 const LIFT = 0.07; // selected form rises this much
 const HOVER = 0.3; // hover emphasis relative to selection
+/* Direct manipulation (live only) */
+const MAX_YAW = 0.9;
+const MAX_PITCH = 0.25;
+const GRIP_LIFT = 0.022; // both forms rise a hair while held
+const SEND = 0.9; // seconds a tapped "message" takes from the request into the answer
+const DRAIN = 0.55; // channel lengths / second as its trail settles into the full stop
 
 const ZERO = { x: 0, y: 0 };
+
+/** Head of a tapped packet `age` seconds after launch (-1 = none): brisk launch, eased landing. */
+function sentHead(age: number) {
+  if (age < 0) return -1;
+  if (age < SEND) {
+    const k = age / SEND;
+    return 0.5 * k + 0.5 * ease.inOutSine(k);
+  }
+  return 1 + (age - SEND) * DRAIN;
+}
 
 export function create(opts: SceneOptions): SceneHandle {
   const { canvas, container, still = false } = opts;
@@ -617,7 +646,13 @@ export function create(opts: SceneOptions): SceneHandle {
   halo.renderOrder = 2;
   sculpture.add(core, halo);
   // one small soft glow per packet, shown once it reaches the open metal face
-  const glows = [glowSprite(PALETTE.mint, 0.14, 0), glowSprite(PALETTE.mint, 0.14, 0)];
+  // (the last two belong to the visitor's tapped packets: larger and brighter)
+  const glows = [
+    glowSprite(PALETTE.mint, 0.14, 0),
+    glowSprite(PALETTE.mint, 0.14, 0),
+    glowSprite(PALETTE.mint, 0.2, 0),
+    glowSprite(PALETTE.mint, 0.2, 0),
+  ];
   for (const g of glows) {
     g.renderOrder = 3;
     sculpture.add(g);
@@ -707,7 +742,8 @@ export function create(opts: SceneOptions): SceneHandle {
   const anim = { g: 0, m: 0 };
   const chMats = [coreMat, haloMat];
   const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
-  const emphasis = (id: string) => (state.selected === id ? 1 : state.hovered === id ? HOVER : 0);
+  const emphasis = (id: string) =>
+    state.selected === id ? 1 : state.hovered === id || (!snap && pickHover === id) ? HOVER : 0;
   let snap = false;
   let frameDt = 0;
   const damp = (cur: number, to: number, lambda: number) => (snap ? to : ease.damp(cur, to, lambda, frameDt));
@@ -720,45 +756,147 @@ export function create(opts: SceneOptions): SceneHandle {
     mat.opacity = e * 0.7; // peaks at ~70% mint
   }
 
-  /** Place packet i's glow; returns how strongly it is arriving on the metal. */
-  function packet(i: number, head: number) {
+  /** Place a packet's glow; returns how strongly it is arriving on the metal. */
+  function packet(g: Sprite, head: number, peak = 0.18) {
     const hc = head < 0 ? 0 : head > 1 ? 1 : head;
-    const g = glows[i];
     path.getPointAt(hc, g.position);
     const w = clamp01((hc - U_EXIT) / (U_LAND - U_EXIT));
     g.position.y += lift.g + (lift.m - lift.g) * w * w * (3 - 2 * w);
     g.position.z += 0.03 * w;
     const alive = head < 0 ? 0 : clamp01(1 - (head - 1) * 7);
     // the glow only shows once the light is on the metal (the glass hides it before)
-    g.material.opacity = clamp01((hc - U_LAND) / 0.06) * alive * 0.18;
+    g.material.opacity = clamp01((hc - U_LAND) / 0.06) * alive * peak;
     const since = (head - U_LAND) * TRAVEL; // seconds since it reached the metal
     return since > 0 ? Math.min(1, since * 3) * Math.exp(-since * 0.6) : 0;
   }
 
+  /* --- direct manipulation (live only; still mode attaches nothing) --- */
+  // Tap the sculpture to send a message: a bright packet runs from the glass
+  // request into the metal answer (~0.9 s) and the answer acknowledges it.
+  const sends = [-1, -1]; // seconds since each tapped packet left (-1 = idle)
+  const landed = [false, false];
+  let sendAge = -1; // seconds since the last launch (request "press")
+  let ackAge = -1; // seconds since the last arrival (answer acknowledgement)
+  function sendMessage() {
+    const slot = sends[0] < 0 ? 0 : sends[1] < 0 ? 1 : sends[0] >= sends[1] ? 0 : 1; // free slot, else restart the older
+    sends[slot] = 0;
+    landed[slot] = false;
+    sendAge = 0;
+  }
+  function stepSends(dt: number) {
+    if (sendAge >= 0) sendAge = sendAge > 3 ? -1 : sendAge + dt;
+    if (ackAge >= 0) ackAge = ackAge > 3 ? -1 : ackAge + dt;
+    for (let i = 0; i < 2; i++) {
+      if (sends[i] < 0) continue;
+      sends[i] += dt;
+      if (!landed[i] && sends[i] >= SEND) {
+        landed[i] = true;
+        ackAge = 0;
+      }
+      if (sentHead(sends[i]) > 1.3) sends[i] = -1;
+    }
+  }
+
+  const raycaster = new Raycaster();
+  const ndc = new Vector2();
+  const hits: Intersection[] = [];
+  const pickables = [glass, metal];
+  /** Which form (if any) is under a point in normalised device coordinates. */
+  function pickAt(x: number, y: number): 'request' | 'answer' | null {
+    ndc.set(x, y);
+    raycaster.setFromCamera(ndc, camera);
+    hits.length = 0;
+    raycaster.intersectObjects(pickables, false, hits);
+    const hit = hits.length ? hits[0].object : null;
+    hits.length = 0;
+    return hit === glass ? 'request' : hit === metal ? 'answer' : null;
+  }
+
+  const drag = still
+    ? null
+    : dragRotate(canvas, {
+        maxYaw: MAX_YAW,
+        maxPitch: MAX_PITCH,
+        onTap: (x, y) => {
+          if (pickAt(x, y)) sendMessage();
+        },
+      });
+  // Mouse hover over a form: the same emphasis its HTML label gives, plus a pointer cursor.
+  let pickHover: string | null = null;
+  let hoverDirty = false;
+  let hoverIn = false;
+  const hoverAt = new Vector2();
+  const onHoverMove = (e: PointerEvent) => {
+    if (e.pointerType !== 'mouse') return;
+    const r = canvas.getBoundingClientRect();
+    hoverAt.set(((e.clientX - r.left) / r.width) * 2 - 1, -(((e.clientY - r.top) / r.height) * 2 - 1));
+    hoverIn = true;
+    hoverDirty = true;
+  };
+  const onHoverLeave = () => {
+    hoverIn = false;
+    hoverDirty = true;
+  };
+  if (!still) {
+    canvas.addEventListener('pointermove', onHoverMove);
+    canvas.addEventListener('pointerleave', onHoverLeave);
+  }
+  let wasDragging = false;
+  /** Once per live frame: advance the drag spring and resolve hover (at most one raycast). */
+  function stepPointer(dt: number) {
+    if (!drag) return;
+    drag.update(dt);
+    const dragging = drag.state.dragging;
+    if (dragging !== wasDragging) {
+      wasDragging = dragging;
+      hoverDirty = true;
+    }
+    if (!hoverDirty) return;
+    hoverDirty = false;
+    const id = hoverIn && !dragging ? pickAt(hoverAt.x, hoverAt.y) : null;
+    if (id === pickHover) return;
+    pickHover = id;
+    canvas.style.cursor = id ? 'pointer' : '';
+  }
+
+  const sway = { y: 0, x: 0 };
   function update(t: number, dt: number, snapNow = false) {
     snap = snapNow;
     frameDt = dt;
     const p = still || snapNow ? ZERO : pointer.update(0.06);
+    const ds = drag && !snapNow ? drag.state : null;
+    const live = ds !== null;
+    const grip = ds ? ds.grip : 0;
 
-    // restrained ambient sway + pointer
-    root.rotation.y = damp(root.rotation.y, Math.sin(t * 0.23) * 0.05 + p.x * 0.2, 3);
-    root.rotation.x = damp(root.rotation.x, Math.sin(t * 0.17 + 1.1) * 0.012 + p.y * 0.05, 3);
+    // restrained ambient sway + pointer (the parallax yields while the sculpture is held)
+    const follow = 1 - grip;
+    sway.y = damp(sway.y, Math.sin(t * 0.23) * 0.05 + p.x * 0.2 * follow, 3);
+    sway.x = damp(sway.x, Math.sin(t * 0.17 + 1.1) * 0.012 + p.y * 0.05 * follow, 3);
+    root.rotation.y = sway.y + (ds ? ds.yaw : 0);
+    root.rotation.x = sway.x + (ds ? ds.pitch : 0);
+
+    // a sent message: the request dips a touch as it lets go; the answer glints and settles
+    const send = live && sendAge >= 0 ? clamp01(sendAge / 0.05) * Math.exp(-sendAge * 3.5) : 0;
+    const press = live && sendAge >= 0 ? -0.008 * Math.exp(-sendAge * 5) * Math.sin(sendAge * 12) : 0;
+    const ack = live && ackAge >= 0 ? clamp01(ackAge / 0.06) * Math.exp(-ackAge * 2.4) : 0;
+    const settle = live && ackAge >= 0 ? -0.014 * Math.exp(-ackAge * 4.5) * Math.sin(ackAge * 13) : 0;
 
     // selection / hover: the form rises a touch, catches more light, its edge
     // catches a mint glint and its stretch of channel holds a steady glow
     anim.g = damp(anim.g, emphasis('request'), 5);
     anim.m = damp(anim.m, emphasis('answer'), 5);
     const breathe = Math.sin(t * 0.55) * 0.012;
-    lift.g = breathe + anim.g * LIFT;
-    lift.m = breathe * 0.6 + anim.m * LIFT;
+    lift.g = breathe + anim.g * LIFT + grip * GRIP_LIFT + press;
+    lift.m = breathe * 0.6 + anim.m * LIFT + grip * GRIP_LIFT + settle;
     glassPivot.position.y = G.y + lift.g;
     metalPivot.position.y = M.y + lift.m;
-    glassShadow.material.opacity = 0.45 - anim.g * 0.1;
-    metalShadow.material.opacity = 0.6 - anim.m * 0.12;
-    glassMat.envMapIntensity = 1.1 + anim.g * 0.3;
-    metalMat.envMapIntensity = 0.85 + anim.m * 0.2;
-    setRing(glassRing, ringMats[0], anim.g);
-    setRing(metalRing, ringMats[1], anim.m);
+    glassShadow.material.opacity = 0.45 - anim.g * 0.1 - grip * 0.06;
+    metalShadow.material.opacity = 0.6 - anim.m * 0.12 - grip * 0.08;
+    glassMat.envMapIntensity = 1.1 + anim.g * 0.3 + grip * 0.15;
+    metalMat.envMapIntensity = 0.85 + anim.m * 0.2 + grip * 0.1;
+    rig.rim.intensity = 1.5 + grip * 0.45;
+    setRing(glassRing, ringMats[0], Math.max(anim.g, send * 0.5));
+    setRing(metalRing, ringMats[1], Math.max(anim.m, ack * 0.85));
     for (let i = 0; i < 2; i++) {
       const u = chMats[i].uniforms;
       u.uLiftA.value = lift.g;
@@ -770,17 +908,23 @@ export function create(opts: SceneOptions): SceneHandle {
     // light travelling request → answer: two packets in an uneven, conversational rhythm
     const h1 = (t % CYCLE) / TRAVEL;
     const h2 = ((t + GAP2) % CYCLE) / TRAVEL;
-    const arrive = Math.max(packet(0, h1), packet(1, h2));
+    const arrive = Math.max(packet(glows[0], h1), packet(glows[1], h2), ack);
+    const s1 = live ? sentHead(sends[0]) : -1;
+    const s2 = live ? sentHead(sends[1]) : -1;
+    packet(glows[2], s1, 0.34);
+    packet(glows[3], s2, 0.34);
     for (let i = 0; i < 2; i++) {
       const u = chMats[i].uniforms;
       u.uHead.value = h1;
       u.uHead2.value = h2;
+      u.uTap.value = s1;
+      u.uTap2.value = s2;
       u.uArrive.value = arrive;
     }
     // the full stop answers each arrival with a soft brightening
-    const lit = 0.75 + arrive * 0.7 + anim.m * 0.3;
+    const lit = 0.75 + arrive * 0.7 + anim.m * 0.3 + ack * 0.6;
     stopPointMat.color.copy(stopBase).multiplyScalar(lit);
-    stopGlow.material.opacity = 0.1 + arrive * 0.22 + anim.m * 0.08;
+    stopGlow.material.opacity = 0.1 + arrive * 0.22 + anim.m * 0.08 + ack * 0.2;
   }
 
   function draw() {
@@ -833,6 +977,8 @@ export function create(opts: SceneOptions): SceneHandle {
   const loop = createLoop(
     renderer,
     (t, dt) => {
+      stepPointer(dt);
+      stepSends(dt);
       update(t + STILL_T, dt);
       draw();
       markReady();
@@ -854,6 +1000,12 @@ export function create(opts: SceneOptions): SceneHandle {
       loop.stop();
       stopResize();
       pointer.dispose();
+      if (drag) {
+        drag.dispose();
+        canvas.removeEventListener('pointermove', onHoverMove);
+        canvas.removeEventListener('pointerleave', onHoverLeave);
+        canvas.style.cursor = '';
+      }
       disposeObject(scene);
       scene.environment?.dispose();
       renderer.dispose();

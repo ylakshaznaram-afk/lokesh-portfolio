@@ -29,6 +29,7 @@ import {
   OrthographicCamera,
   PCFShadowMap,
   PlaneGeometry,
+  Raycaster,
   RingGeometry,
   Scene,
   ShaderMaterial,
@@ -36,6 +37,7 @@ import {
   Vector2,
   Vector3,
   Vector4,
+  type Intersection,
   type Material,
   type Sprite,
   type SpriteMaterial,
@@ -51,6 +53,7 @@ import {
   createLoop,
   createRenderer,
   disposeObject,
+  dragRotate,
   ease,
   flowMaterial,
   glowSprite,
@@ -202,6 +205,9 @@ const FOCUS_CYCLE = 1.5;
  * swap from the static image is seamless.
  */
 const STILL_TRACE_AT = 0.6;
+/* Direct manipulation (live only): turn the plate about its vertical centre, tilt a little. */
+const MAX_YAW = 0.7;
+const MAX_PITCH = 0.12;
 
 /* ------------------------------------------------------------------ */
 /* Local geometry helpers                                              */
@@ -903,6 +909,81 @@ export function create(opts: SceneOptions): SceneHandle {
   /** Approach factor for one frame (1 = settle immediately). */
   const approach = (lambda: number, dt: number, snap: boolean) => (snap ? 1 : 1 - Math.exp(-lambda * dt));
 
+  /* ---------------- Direct manipulation (live only; still mode attaches nothing) ---------------- */
+  // Drag to turn the map; click / tap a component to select it (the host
+  // answers with setSelected, so this never self-selects).
+  const raycaster = new Raycaster();
+  const ndc = new Vector2();
+  const hits: Intersection[] = [];
+  const pickables: Object3D[] = [];
+  const pickNode = new Map<Object3D, NodeId>();
+  for (const n of nodeList) {
+    for (const child of n.body.children) {
+      if (!(child as Mesh).isMesh) continue;
+      pickables.push(child);
+      pickNode.set(child, n.id);
+    }
+  }
+  /** Component (if any) under a point in normalised device coordinates. */
+  function pickAt(x: number, y: number): NodeId | null {
+    ndc.set(x, y);
+    raycaster.setFromCamera(ndc, camera);
+    hits.length = 0;
+    raycaster.intersectObjects(pickables, false, hits);
+    const id = hits.length ? (pickNode.get(hits[0].object) ?? null) : null;
+    hits.length = 0;
+    return id;
+  }
+  const drag = still
+    ? null
+    : dragRotate(canvas, {
+        maxYaw: MAX_YAW,
+        maxPitch: MAX_PITCH,
+        onTap: (x, y) => {
+          const id = pickAt(x, y);
+          if (id) opts.onPick?.(id);
+          console.debug('[pick]', id); // TEMP-PICK
+        },
+      });
+  // Mouse hover over a component: its hovered look plus a pointer cursor.
+  let pickHover: NodeId | null = null;
+  let hoverDirty = false;
+  let hoverIn = false;
+  const hoverAt = new Vector2();
+  const onHoverMove = (e: PointerEvent) => {
+    if (e.pointerType !== 'mouse') return;
+    const r = canvas.getBoundingClientRect();
+    hoverAt.set(((e.clientX - r.left) / r.width) * 2 - 1, -(((e.clientY - r.top) / r.height) * 2 - 1));
+    hoverIn = true;
+    hoverDirty = true;
+  };
+  const onHoverLeave = () => {
+    hoverIn = false;
+    hoverDirty = true;
+  };
+  if (!still) {
+    canvas.addEventListener('pointermove', onHoverMove);
+    canvas.addEventListener('pointerleave', onHoverLeave);
+  }
+  let wasDragging = false;
+  /** Once per live frame: advance the drag spring and resolve hover (at most one raycast). */
+  function stepPointer(dt: number) {
+    if (!drag) return;
+    drag.update(dt);
+    const dragging = drag.state.dragging;
+    if (dragging !== wasDragging) {
+      wasDragging = dragging;
+      hoverDirty = true;
+    }
+    if (!hoverDirty) return;
+    hoverDirty = false;
+    const id = hoverIn && !dragging ? pickAt(hoverAt.x, hoverAt.y) : null;
+    if (id === pickHover) return;
+    pickHover = id;
+    canvas.style.cursor = id ? 'pointer' : '';
+  }
+
+  const swayRot = { y: 0, x: 0 };
   /**
    * Advance the pose. `rest` draws the deterministic still pose: no sway, no
    * pointer, every transition settled; packets use the same functions of time
@@ -910,18 +991,26 @@ export function create(opts: SceneOptions): SceneHandle {
    */
   function update(t: number, dt: number, rest: boolean, snap = rest) {
     const sel = state.selected;
-    const hov = state.hovered;
+    const hov = rest ? state.hovered : (pickHover ?? state.hovered);
+    const ds = drag && !rest ? drag.state : null;
+    const grip = ds ? ds.grip : 0;
 
-    // ambient sway + gentle pointer response
+    // ambient sway + gentle pointer response (the parallax yields while the map is held)
     if (rest) {
-      outer.rotation.x = 0;
-      root.rotation.y = -CAM_AZIMUTH;
+      swayRot.y = 0;
+      swayRot.x = 0;
     } else {
       const p = pointer.update(0.05);
+      const follow = 1 - grip;
       const sway = Math.sin(t * 0.16) * 0.03 + Math.sin(t * 0.07 + 1.3) * 0.015;
-      root.rotation.y = ease.damp(root.rotation.y, -CAM_AZIMUTH + sway + p.x * 0.08, 3, dt);
-      outer.rotation.x = ease.damp(outer.rotation.x, p.y * 0.035, 3, dt);
+      swayRot.y = ease.damp(swayRot.y, sway + p.x * 0.08 * follow, 3, dt);
+      swayRot.x = ease.damp(swayRot.x, p.y * 0.035 * follow, 3, dt);
     }
+    root.rotation.y = -CAM_AZIMUTH + swayRot.y + (ds ? ds.yaw : 0);
+    outer.rotation.x = swayRot.x + (ds ? ds.pitch : 0);
+    // held: the rim light lifts and every inlay wakes a little
+    lights.rim.intensity = 1.1 + 0.4 * grip;
+    const wake = 1 + 0.3 * grip;
 
     const kLift = approach(7, dt, snap);
     const kGlow = approach(6, dt, snap);
@@ -944,7 +1033,7 @@ export function create(opts: SceneOptions): SceneHandle {
       n.glow += (glowT - n.glow) * kGlow;
       n.ring += (ringT - n.ring) * kRing;
       n.body.position.y = n.lift;
-      n.inlay.color.copy(mintLinear).multiplyScalar(n.glow * n.gain);
+      n.inlay.color.copy(mintLinear).multiplyScalar(n.glow * n.gain * wake);
       n.outline.opacity = n.ring;
       n.outlineMesh.visible = n.ring > 0.002;
       n.shadow.opacity = n.shadowBase * (1 - (n.lift / LIFT_SELECTED) * 0.45);
@@ -1016,6 +1105,7 @@ export function create(opts: SceneOptions): SceneHandle {
   const loop = createLoop(
     renderer,
     (t, dt) => {
+      stepPointer(dt);
       update(t + stillTime, dt, false, first);
       first = false;
       draw();
@@ -1042,6 +1132,12 @@ export function create(opts: SceneOptions): SceneHandle {
       loop.stop();
       stopResize();
       pointer.dispose();
+      if (drag) {
+        drag.dispose();
+        canvas.removeEventListener('pointermove', onHoverMove);
+        canvas.removeEventListener('pointerleave', onHoverLeave);
+        canvas.style.cursor = '';
+      }
       disposeObject(scene);
       lights.key.shadow.dispose();
       scene.environment?.dispose();

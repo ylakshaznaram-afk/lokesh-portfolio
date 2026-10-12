@@ -315,6 +315,110 @@ export function pointerTracker(container: HTMLElement, enabled = true) {
   };
 }
 
+/**
+ * Direct manipulation shared by every sculpture: drag to turn it, release and
+ * it springs back to its composed rest pose with a little overshoot. A press
+ * that doesn't move is a tap (coordinates in -1…1, y up, for raycasting).
+ * Touch drags are horizontal only (CSS touch-action: pan-y) so the page still
+ * scrolls. Call update(dt) once per frame and add yaw/pitch to the model.
+ */
+export function dragRotate(
+  el: HTMLElement,
+  opts: { maxYaw?: number; maxPitch?: number; onTap?: (x: number, y: number) => void; onGrab?: () => void } = {},
+) {
+  const maxYaw = opts.maxYaw ?? 0.85;
+  const maxPitch = opts.maxPitch ?? 0.22;
+  const s = { yaw: 0, pitch: 0, dragging: false, /** 0…1, eases up while held — use for grab feedback. */ grip: 0 };
+  let rawYaw = 0;
+  let rawPitch = 0;
+  let vYaw = 0;
+  let vPitch = 0;
+  let id = -1;
+  let lastX = 0;
+  let lastY = 0;
+  let startX = 0;
+  let startY = 0;
+  let lastT = 0;
+  let moved = false;
+  const soft = (v: number, max: number) => max * Math.tanh(v / max); // rubber-band limit
+
+  const onDown = (e: PointerEvent) => {
+    if (e.button > 0 || id !== -1) return;
+    id = e.pointerId;
+    startX = lastX = e.clientX;
+    startY = lastY = e.clientY;
+    lastT = e.timeStamp;
+    moved = false;
+    s.dragging = true;
+    rawYaw = s.yaw;
+    rawPitch = s.pitch;
+    vYaw = vPitch = 0;
+    el.setPointerCapture?.(id);
+    opts.onGrab?.();
+  };
+  const onMove = (e: PointerEvent) => {
+    if (e.pointerId !== id) return;
+    const dx = e.clientX - lastX;
+    const dy = e.pointerType === 'touch' ? 0 : e.clientY - lastY;
+    if (!moved && Math.hypot(e.clientX - startX, e.clientY - startY) > 5) moved = true;
+    const w = Math.max(1, el.clientWidth);
+    const dYaw = (dx / w) * Math.PI * 1.4;
+    const dPitch = (dy / w) * Math.PI * 0.9;
+    rawYaw += dYaw;
+    rawPitch += dPitch;
+    const dt = Math.max(1, e.timeStamp - lastT) / 1000;
+    vYaw = vYaw * 0.6 + (dYaw / dt) * 0.4;
+    vPitch = vPitch * 0.6 + (dPitch / dt) * 0.4;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    lastT = e.timeStamp;
+  };
+  const onUp = (e: PointerEvent) => {
+    if (e.pointerId !== id) return;
+    id = -1;
+    s.dragging = false;
+    if (e.timeStamp - lastT > 80) vYaw = vPitch = 0; // held still before letting go
+    if (!moved && opts.onTap) {
+      const r = el.getBoundingClientRect();
+      opts.onTap(((e.clientX - r.left) / r.width) * 2 - 1, -(((e.clientY - r.top) / r.height) * 2 - 1));
+    }
+  };
+  el.addEventListener('pointerdown', onDown);
+  el.addEventListener('pointermove', onMove);
+  el.addEventListener('pointerup', onUp);
+  el.addEventListener('pointercancel', onUp);
+
+  return {
+    state: s,
+    update(dt: number) {
+      const d = Math.min(dt, 0.05);
+      if (s.dragging) {
+        s.yaw += (soft(rawYaw, maxYaw) - s.yaw) * Math.min(1, d * 18);
+        s.pitch += (soft(rawPitch, maxPitch) - s.pitch) * Math.min(1, d * 18);
+        s.grip = Math.min(1, s.grip + d * 5);
+      } else {
+        // Damped spring back to rest, seeded with the release velocity (slightly underdamped).
+        vYaw += (-26 * s.yaw - 6.5 * vYaw) * d;
+        vPitch += (-26 * s.pitch - 6.5 * vPitch) * d;
+        s.yaw = soft(s.yaw + vYaw * d, maxYaw * 1.1);
+        s.pitch = soft(s.pitch + vPitch * d, maxPitch * 1.1);
+        s.grip = Math.max(0, s.grip - d * 3);
+      }
+      return s;
+    },
+    /** True while the sculpture is still moving from a drag (keep rendering). */
+    get settling() {
+      return s.dragging || Math.abs(s.yaw) > 1e-4 || Math.abs(s.pitch) > 1e-4 || Math.abs(vYaw) > 1e-3;
+    },
+    dispose() {
+      el.removeEventListener('pointerdown', onDown);
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', onUp);
+      el.removeEventListener('pointercancel', onUp);
+    },
+  };
+}
+
 /** Animation loop with dt clamp and a slow-frame watchdog. */
 export function createLoop(renderer: WebGLRenderer, tick: (elapsed: number, dt: number) => void, onSlow?: () => void) {
   let running = false;

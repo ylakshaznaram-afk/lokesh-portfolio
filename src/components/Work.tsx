@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { profile, projects, type Project } from '../data/content';
 import { Icon } from './Icon';
 import { ConstellationFeature } from './work/ConstellationFeature';
@@ -18,7 +19,64 @@ const LAYOUT: Record<Project['visual'], 'featured' | 'medium' | 'wide'> = {
   journey: 'wide',
 };
 
+/**
+ * Pointer-tracked depth for the project visuals: the CSS 3D compositions turn
+ * toward the pointer and a soft sheen follows it. Fine pointers only, and
+ * nothing at all when reduced motion is preferred.
+ */
+function usePointerDepth() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const root = ref.current;
+    if (!root) return;
+    const capable = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let frame = 0;
+    let active: HTMLElement | null = null;
+    let x = 0;
+    let y = 0;
+    const apply = () => {
+      frame = 0;
+      if (!active) return;
+      const r = active.getBoundingClientRect();
+      const nx = Math.max(0, Math.min(1, (x - r.left) / r.width));
+      const ny = Math.max(0, Math.min(1, (y - r.top) / r.height));
+      active.style.setProperty('--tilt-x', (nx * 2 - 1).toFixed(3));
+      active.style.setProperty('--tilt-y', (ny * 2 - 1).toFixed(3));
+      active.style.setProperty('--sheen-x', `${(nx * 100).toFixed(1)}%`);
+      active.style.setProperty('--sheen-y', `${(ny * 100).toFixed(1)}%`);
+    };
+    const release = () => {
+      if (!active) return;
+      active.classList.remove('is-tilting');
+      for (const v of ['--tilt-x', '--tilt-y']) active.style.removeProperty(v);
+      active = null;
+    };
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse' || !capable.matches || reduced.matches) return;
+      const el = (e.target as Element).closest<HTMLElement>('.project__visual');
+      if (el !== active) {
+        release();
+        active = el;
+        active?.classList.add('is-tilting');
+      }
+      x = e.clientX;
+      y = e.clientY;
+      if (active && !frame) frame = requestAnimationFrame(apply);
+    };
+    root.addEventListener('pointermove', onMove, { passive: true });
+    root.addEventListener('pointerleave', release);
+    return () => {
+      cancelAnimationFrame(frame);
+      root.removeEventListener('pointermove', onMove);
+      root.removeEventListener('pointerleave', release);
+    };
+  }, []);
+  return ref;
+}
+
 export function Work({ morphSlug, openSlug, onOpen }: Props) {
+  const bentoRef = usePointerDepth();
   return (
     <section className="section work" id="work" aria-labelledby="work-title">
       <div className="container">
@@ -32,7 +90,7 @@ export function Work({ morphSlug, openSlug, onOpen }: Props) {
           <p className="section-head__lead">Four projects from my ServiceNow roles at Deloitte, SenecaGlobal and Cognizant.</p>
         </header>
 
-        <div className="work__bento">
+        <div className="work__bento" ref={bentoRef}>
           {projects.map((p, i) => (
             <ProjectCard
               key={p.slug}

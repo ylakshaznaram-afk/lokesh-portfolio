@@ -16,6 +16,7 @@ export function ConstellationFeature({ alt, morphName }: { alt: string; morphNam
       <div className="project__visual" style={{ viewTransitionName: morphName }}>
         <Visual3D
           scene="constellation"
+          hint="Drag to turn · click a component"
           alt={alt}
           sizes="(min-width: 1024px) 38vw, 92vw"
           hotspots={constellationNodes.map((n) => ({ id: n.id, label: n.short }))}

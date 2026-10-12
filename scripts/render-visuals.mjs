@@ -40,6 +40,7 @@ const JOBS = {
     card: { aspect: [16, 10], widths: [1200, 680] },
     square: { aspect: [1, 1], widths: [800] },
   },
+  graph: { card: { aspect: [16, 10], widths: [1000, 560] } }, // demo control panel
 };
 
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });

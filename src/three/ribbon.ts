@@ -34,13 +34,16 @@ import {
   Path,
   PerspectiveCamera,
   PlaneGeometry,
+  Raycaster,
   Scene,
   ShaderChunk,
   ShaderMaterial,
   Shape,
   TubeGeometry,
+  Vector2,
   Vector3,
   Vector4,
+  type Intersection,
   type WebGLRenderer,
 } from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
@@ -53,6 +56,7 @@ import {
   createLoop,
   createRenderer,
   disposeObject,
+  dragRotate,
   ease,
   flowMaterial,
   materials,
@@ -140,6 +144,9 @@ const STILL_TIME = 2.2; // fixed time for the still pose
  * (the record is "being routed"), with its trail reaching back toward Request.
  */
 const STILL_HEAD_OFFSET = 0.022;
+/* Direct manipulation (live only) */
+const MAX_YAW = 0.55;
+const MAX_PITCH = 0.15;
 
 /* ------------------------------------------------------------------ */
 /* Small local helpers                                                 */
@@ -591,6 +598,8 @@ interface Gate {
   inlay: MeshBasicMaterial;
   lamp: MeshBasicMaterial;
   veil: ShaderMaterial;
+  /** Meshes a click or tap selects this gateway by: glass frame, the opening's veil, the sill. */
+  picks: Mesh[];
   baseY: number;
   phase: number;
   u: number;
@@ -624,7 +633,8 @@ function buildGate(spec: GateSpec, sillMaterial: MeshPhysicalMaterial, index: nu
   const frameSmooth = toCreasedNormals(frameGeo, Math.PI / 3);
   if (frameSmooth !== frameGeo) frameGeo.dispose();
   const glass = gatewayGlass();
-  body.add(new Mesh(frameSmooth, glass));
+  const frameMesh = new Mesh(frameSmooth, glass);
+  body.add(frameMesh);
 
   // Illuminated inlay set into the glass's front face, on the bar's centre line.
   const pts = gatewayInlayPath(w, h, FRAME_BAR, sillTop).getSpacedPoints(160);
@@ -673,6 +683,7 @@ function buildGate(spec: GateSpec, sillMaterial: MeshPhysicalMaterial, index: nu
     inlay,
     lamp: lampMat,
     veil,
+    picks: [frameMesh, veilMesh, sill],
     baseY: spec.pos[1],
     phase: index * 2.1,
     u: 0,
@@ -1024,15 +1035,97 @@ export function create(opts: SceneOptions): SceneHandle {
     pulse.settled = approach(pulse.settled, remaining < 0.002 ? 1 : 0, 3);
   }
 
+  /* Direct manipulation (live only; still mode attaches nothing) -------- */
+  // Drag to turn the ribbon; click / tap a gateway to select its stage (the
+  // host answers with setSelected, so this never self-selects).
+  const raycaster = new Raycaster();
+  const ndc = new Vector2();
+  const hits: Intersection[] = [];
+  const pickables: Mesh[] = [];
+  const pickGate = new Map<Object3D, GateId>();
+  for (const g of gates) {
+    for (const m of g.picks) {
+      pickables.push(m);
+      pickGate.set(m, g.id);
+    }
+  }
+  /** Gateway (if any) under a point in normalised device coordinates. */
+  function pickAt(x: number, y: number): GateId | null {
+    ndc.set(x, y);
+    raycaster.setFromCamera(ndc, camera);
+    hits.length = 0;
+    raycaster.intersectObjects(pickables, false, hits);
+    const id = hits.length ? (pickGate.get(hits[0].object) ?? null) : null;
+    hits.length = 0;
+    return id;
+  }
+  const drag = still
+    ? null
+    : dragRotate(canvas, {
+        maxYaw: MAX_YAW,
+        maxPitch: MAX_PITCH,
+        onTap: (x, y) => {
+          const id = pickAt(x, y);
+          if (id) opts.onPick?.(id);
+          console.debug('[pick]', id); // TEMP-PICK
+        },
+      });
+  // Mouse hover over a gateway: its hovered look plus a pointer cursor.
+  let pickHover: GateId | null = null;
+  let hoverDirty = false;
+  let hoverIn = false;
+  const hoverAt = new Vector2();
+  const onHoverMove = (e: PointerEvent) => {
+    if (e.pointerType !== 'mouse') return;
+    const r = canvas.getBoundingClientRect();
+    hoverAt.set(((e.clientX - r.left) / r.width) * 2 - 1, -(((e.clientY - r.top) / r.height) * 2 - 1));
+    hoverIn = true;
+    hoverDirty = true;
+  };
+  const onHoverLeave = () => {
+    hoverIn = false;
+    hoverDirty = true;
+  };
+  if (!still) {
+    canvas.addEventListener('pointermove', onHoverMove);
+    canvas.addEventListener('pointerleave', onHoverLeave);
+  }
+  let wasDragging = false;
+  /** Once per live frame: advance the drag spring and resolve hover (at most one raycast). */
+  function stepPointer(dt: number) {
+    if (!drag) return;
+    drag.update(dt);
+    const dragging = drag.state.dragging;
+    if (dragging !== wasDragging) {
+      wasDragging = dragging;
+      hoverDirty = true;
+    }
+    if (!hoverDirty) return;
+    hoverDirty = false;
+    const id = hoverIn && !dragging ? pickAt(hoverAt.x, hoverAt.y) : null;
+    if (id === pickHover) return;
+    pickHover = id;
+    canvas.style.cursor = id ? 'pointer' : '';
+  }
+
+  const sway = { x: 0, y: 0 };
   function update(t: number, dt: number) {
     frameDt = dt;
     const p = snap ? zeroPointer : pointer.update(0.06);
+    const ds = drag && !snap ? drag.state : null;
+    const grip = ds ? ds.grip : 0;
 
-    // Ambient sway (a few degrees) + gentle pointer response.
-    const ry = Math.sin(t * 0.16) * 0.035 + p.x * 0.1;
-    const rx = Math.sin(t * 0.11 + 1.3) * 0.01 + p.y * 0.04;
-    root.rotation.y = approach(root.rotation.y, ry, 2.5);
-    root.rotation.x = approach(root.rotation.x, rx, 2.5);
+    // Ambient sway (a few degrees) + gentle pointer response; the pointer
+    // parallax yields while the ribbon is held so the two never fight.
+    const follow = 1 - grip;
+    const ry = Math.sin(t * 0.16) * 0.035 + p.x * 0.1 * follow;
+    const rx = Math.sin(t * 0.11 + 1.3) * 0.01 + p.y * 0.04 * follow;
+    sway.y = approach(sway.y, ry, 2.5);
+    sway.x = approach(sway.x, rx, 2.5);
+    root.rotation.y = sway.y + (ds ? ds.yaw : 0);
+    root.rotation.x = sway.x + (ds ? ds.pitch : 0);
+    // Held: the rim light lifts and every gateway's inlay wakes a little.
+    rig.rim.intensity = 1.1 + 0.4 * grip;
 
     // Pulse.
     if (snap) {
@@ -1080,15 +1173,16 @@ export function create(opts: SceneOptions): SceneHandle {
 
     // Gateways: float, then answer selection / hover / the passing pulse.
     const anySelected = selectedId !== null;
-    const restingEmphasis = snap && !selectedId && !hoveredId;
+    const hovId = snap ? hoveredId : (pickHover ?? hoveredId);
+    const restingEmphasis = snap && !selectedId && !hovId;
     // While a stage button is hovered, the passing pulse lights the other
     // gateways only faintly, so the hovered one always reads first.
-    hoverAny = approach(hoverAny, hoveredId ? 1 : 0, 6);
+    hoverAny = approach(hoverAny, hovId ? 1 : 0, 6);
     for (let i = 0; i < gates.length; i++) {
       const g = gates[i];
       g.group.position.y = g.baseY + Math.sin(t * 0.5 + g.phase) * 0.012;
       const isSel = selectedId === g.id ? 1 : 0;
-      const isHov = hoveredId === g.id || (restingEmphasis && g.id === 'route') ? 1 : 0;
+      const isHov = hovId === g.id || (restingEmphasis && g.id === 'route') ? 1 : 0;
       g.sel = approach(g.sel, isSel, 4);
       g.hov = approach(g.hov, isHov, 6);
       g.dim = approach(g.dim, anySelected && !isSel ? 1 : 0, 4);
@@ -1096,7 +1190,7 @@ export function create(opts: SceneOptions): SceneHandle {
       const d = head - g.u;
       const act = (d < 0 ? Math.exp(-((d / 0.03) ** 2)) : Math.exp(-((d / 0.11) ** 2))) * live;
       const pass = act * (1 - 0.6 * hoverAny * (1 - g.hov));
-      const e = Math.max(g.sel, 0.62 * g.hov, 0.55 * pass);
+      const e = Math.max(g.sel, 0.62 * g.hov, 0.55 * pass, 0.2 * grip);
       const dimK = 1 - 0.45 * g.dim;
 
       colB.copy(COL_MINT).multiplyScalar(1.1);
@@ -1104,7 +1198,7 @@ export function create(opts: SceneOptions): SceneHandle {
       colB.copy(COL_MINT).multiplyScalar(1.25);
       g.lamp.color.copy(colA.copy(COL_ICE).multiplyScalar(0.3).lerp(colB, e).multiplyScalar(dimK));
       g.veil.uniforms.uStrength.value = Math.min(1, 0.85 * g.sel + 0.35 * g.hov + 0.22 * pass) * dimK;
-      g.glass.envMapIntensity = 1.8 * (1 - 0.25 * g.dim) + 0.2 * g.sel;
+      g.glass.envMapIntensity = 1.8 * (1 - 0.25 * g.dim) + 0.2 * g.sel + 0.2 * grip;
     }
   }
 
@@ -1125,6 +1219,7 @@ export function create(opts: SceneOptions): SceneHandle {
     renderer,
     (t, dt) => {
       snap = false;
+      stepPointer(dt);
       update(t + STILL_TIME, dt);
       draw();
       ready();
@@ -1155,6 +1250,12 @@ export function create(opts: SceneOptions): SceneHandle {
       loop.stop();
       stopResize();
       pointer.dispose();
+      if (drag) {
+        drag.dispose();
+        canvas.removeEventListener('pointermove', onHoverMove);
+        canvas.removeEventListener('pointerleave', onHoverLeave);
+        canvas.style.cursor = '';
+      }
       disposeObject(scene);
       scene.environment?.dispose();
       renderer.dispose();

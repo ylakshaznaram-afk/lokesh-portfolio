@@ -39,6 +39,7 @@ export function Hero() {
         <div className="hero__visual">
           <Visual3D
             scene="prism"
+            hint="Drag to turn · tap to send"
             priority
             sizes="(min-width: 1024px) 40vw, (min-width: 768px) 44vw, 88vw"
             alt="Dialogue Prism: a smoked-glass form and a satin-metal form joined by a luminous channel — a request becoming a clear answer."

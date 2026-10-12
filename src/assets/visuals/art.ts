@@ -15,6 +15,8 @@ import ribbonSq800 from './ribbon-square-800.webp';
 import constellation1200 from './constellation-card-1200.webp';
 import constellation680 from './constellation-card-680.webp';
 import constellationSq800 from './constellation-square-800.webp';
+import graph1000 from './graph-card-1000.webp';
+import graph560 from './graph-card-560.webp';
 
 export interface ArtVariant {
   src: string;
@@ -59,6 +61,9 @@ export const art: Record<SceneKey, Art> = {
       height: 800,
       hotspots: hs.constellation.square,
     },
+  },
+  graph: {
+    main: { src: graph1000, srcSet: `${graph560} 560w, ${graph1000} 1000w`, width: 1000, height: 625, hotspots: hs.graph?.card ?? {} },
   },
 };
 

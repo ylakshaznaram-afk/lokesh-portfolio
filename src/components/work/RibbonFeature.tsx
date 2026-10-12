@@ -21,6 +21,7 @@ export function RibbonFeature({ alt, morphName }: { alt: string; morphName?: str
       <div className="project__visual" style={{ viewTransitionName: morphName }}>
         <Visual3D
           scene="ribbon"
+          hint="Drag to turn · click a gate"
           alt={alt}
           sizes="(min-width: 1024px) 56vw, 92vw"
           squareMedia="(min-width: 1024px)"

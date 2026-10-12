@@ -5,4 +5,5 @@ export const sceneLoaders: Record<SceneKey, () => Promise<SceneModule>> = {
   prism: () => import('./prism'),
   ribbon: () => import('./ribbon'),
   constellation: () => import('./constellation'),
+  graph: () => import('./graph'),
 };
