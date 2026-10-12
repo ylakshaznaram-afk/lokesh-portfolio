@@ -17,6 +17,8 @@ export const profile = {
   nameLines: ['Lokesh', 'Gadchanda'],
   initials: 'LG',
   role: 'ServiceNow Developer & Conversational Designer',
+  /** The two halves of the role, shown as connected chips in the hero. */
+  roles: ['ServiceNow Developer', 'Conversational Designer'] as const,
   intro: 'I build Virtual Agent experiences, custom applications, and integrations that make enterprise services easier to use.',
   focus: ['Virtual Agent', 'Conversational UX', 'Integrations', 'ITSM', 'HRSD', 'ITOM'],
   slogan: ['Complex workflows.', 'Clear conversations.'],
