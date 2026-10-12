@@ -39,7 +39,8 @@ html {
 
 body {
   margin: 0;
-  background: var(--bg);
+  /* Transparent so the fixed .backdrop (z-index -1) shows; html carries the base colour. */
+  background: transparent;
   color: var(--text);
   font-family: var(--f-body);
   font-size: var(--t-body);
@@ -50,16 +51,129 @@ body {
   overflow-x: clip;
 }
 
-/* Ambient light: two very soft pools, fixed behind everything. */
-body::before {
-  content: '';
+/* ------------------------------------------------------------------ */
+/* Ambient backdrop (components/Backdrop.tsx), fixed behind everything  */
+/* ------------------------------------------------------------------ */
+.backdrop {
   position: fixed;
   inset: 0;
   z-index: -1;
+  overflow: hidden;
   pointer-events: none;
-  background:
-    radial-gradient(70vw 60vh at 88% -8%, rgba(141, 190, 255, 0.07), transparent 70%),
-    radial-gradient(55vw 55vh at -12% 46%, rgba(142, 240, 204, 0.045), transparent 70%);
+  contain: strict;
+  background: var(--bg);
+}
+.backdrop__aurora {
+  position: absolute;
+  width: 72vmax;
+  height: 72vmax;
+  border-radius: 50%;
+  will-change: transform;
+  animation: aurora-drift 38s var(--ease-in-out, ease-in-out) infinite alternate;
+}
+.backdrop__aurora--a {
+  top: -34vmax;
+  right: -22vmax;
+  background: radial-gradient(closest-side, rgba(141, 190, 255, 0.26), rgba(141, 190, 255, 0.08) 55%, transparent);
+}
+.backdrop__aurora--b {
+  top: 18vh;
+  left: -36vmax;
+  background: radial-gradient(closest-side, rgba(142, 240, 204, 0.2), rgba(142, 240, 204, 0.055) 55%, transparent);
+  animation-duration: 46s;
+  animation-delay: -12s;
+}
+.backdrop__aurora--c {
+  bottom: -44vmax;
+  right: 4vw;
+  width: 64vmax;
+  height: 64vmax;
+  background: radial-gradient(closest-side, rgba(92, 110, 255, 0.18), rgba(92, 110, 255, 0.045) 55%, transparent);
+  animation-duration: 54s;
+  animation-delay: -24s;
+}
+@keyframes aurora-drift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-6vmax, 5vmax, 0) scale(1.12);
+  }
+  100% {
+    transform: translate3d(5vmax, -3vmax, 0) scale(0.94);
+  }
+}
+.backdrop__grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(243, 245, 247, 0.11) 1px, transparent 1.4px);
+  background-size: 30px 30px;
+  -webkit-mask-image: radial-gradient(ellipse 85% 70% at 50% 35%, #000 10%, transparent 75%);
+  mask-image: radial-gradient(ellipse 85% 70% at 50% 35%, #000 10%, transparent 75%);
+  opacity: 0.7;
+}
+.backdrop__threads {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.backdrop__thread {
+  fill: none;
+  stroke: rgba(243, 245, 247, 0.08);
+  stroke-width: 1;
+}
+.backdrop__pulse {
+  fill: none;
+  stroke: var(--mint);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-dasharray: 70 930;
+  stroke-dashoffset: 1000;
+  opacity: 0.55;
+  animation: thread-pulse 13s linear infinite;
+}
+.backdrop__pulse--2 {
+  stroke: var(--ice);
+  animation-duration: 17s;
+  animation-delay: -6s;
+}
+.backdrop__pulse--3 {
+  animation-duration: 21s;
+  animation-delay: -14s;
+  opacity: 0.4;
+}
+@keyframes thread-pulse {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.backdrop__spot {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(520px circle at var(--spot-x, 50%) var(--spot-y, 20%), rgba(142, 240, 204, 0.07), rgba(141, 190, 255, 0.025) 45%, transparent 70%);
+  opacity: 0;
+  transition: opacity 700ms ease;
+}
+.backdrop[data-spot='on'] .backdrop__spot {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .backdrop__aurora,
+  .backdrop__pulse {
+    animation: none;
+  }
+  .backdrop__pulse {
+    stroke-dashoffset: 400;
+  }
+}
+@media (max-width: 767px) {
+  .backdrop__pulse--3 {
+    display: none;
+  }
+  .backdrop__grid {
+    background-size: 24px 24px;
+  }
 }
 
 /* Fine paper-grain texture. */

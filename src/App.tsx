@@ -1,4 +1,5 @@
 import { lazy, startTransition, Suspense, useEffect, useState } from 'react';
+import { Backdrop } from './components/Backdrop';
 import { Credibility } from './components/Credibility';
 import { Hero } from './components/Hero';
 import { Nav } from './components/Nav';
@@ -20,6 +21,7 @@ export function App() {
 
   return (
     <>
+      <Backdrop />
       <a className="skip-link" href="#main">
         Skip to content
       </a>
