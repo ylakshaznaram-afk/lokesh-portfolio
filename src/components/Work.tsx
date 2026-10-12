@@ -85,7 +85,7 @@ export function Work({ morphSlug, openSlug, onOpen }: Props) {
           <h2 id="work-title" className="section-head__title">
             {profile.slogan[0]}
             <br />
-            <span className="work__title-accent">{profile.slogan[1]}</span>
+            <em className="accent">{profile.slogan[1]}</em>
           </h2>
           <p className="section-head__lead">Four projects from my ServiceNow roles at Deloitte, SenecaGlobal and Cognizant.</p>
         </header>

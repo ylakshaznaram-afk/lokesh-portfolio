@@ -7,7 +7,7 @@ export function Experience() {
         <header className="section-head">
           <p className="kicker">Experience</p>
           <h2 id="experience-title" className="section-head__title">
-            A career on the ServiceNow platform.
+            A career on the <em className="accent">ServiceNow platform.</em>
           </h2>
         </header>
         <ol className="career">

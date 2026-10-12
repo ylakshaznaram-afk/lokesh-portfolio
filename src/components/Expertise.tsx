@@ -12,7 +12,7 @@ export function Expertise() {
         <header className="section-head">
           <p className="kicker">Expertise</p>
           <h2 id="expertise-title" className="section-head__title">
-            Four kinds of work, one experience.
+            Four kinds of work, <em className="accent">one experience.</em>
           </h2>
           <p className="section-head__lead">From the words a person reads to the integration that answers them.</p>
         </header>

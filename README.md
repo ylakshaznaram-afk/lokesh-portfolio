@@ -34,7 +34,7 @@ If the site moves to another domain, update `og:url`, `og:image`, `twitter:image
 | `src/components/work/` | Project visuals: ribbon + stage controls, constellation + component controls, and the two HTML/CSS 3D compositions (conversation panels, HR journey). |
 | `src/components/visuals/` | Detailed SVG illustrations shown inside the case studies (synthetic data). |
 | `src/styles/` | `tokens.css` (colour, type, spacing, motion), `base.css`, `sections.css`. |
-| `public/` | Self-hosted display font (+ OFL licence), favicons, social preview image, robots.txt. |
+| `public/` | Self-hosted display and accent fonts (Bricolage Grotesque, Instrument Serif italic; OFL licences), favicons, social preview image, robots.txt. |
 | `lab.html`, `src/lab/` | Dev-only harness for the sculptures (not in the production build). |
 
 ## Before publishing — content dependencies

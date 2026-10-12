@@ -84,6 +84,10 @@ export function Hero() {
     <section className="hero" id="top" aria-labelledby="hero-name">
       <div className="container hero__grid">
         <div className="hero__copy">
+          <p className="hero__hello">
+            <span className="hero__hello-rule" aria-hidden="true" />
+            Hi, I’m
+          </p>
           <h1 id="hero-name" className="hero__name" aria-label={profile.name} ref={nameRef}>
             <span className="hero__line">
               <Letters text={first} from={0} />
@@ -96,13 +100,10 @@ export function Hero() {
 
         <div className="hero__detail">
           <p className="hero__role">
-            <span className="role-chip role-chip--dev">{profile.roles[0]}</span>
-            <span className="role-pair">
-              <span className="role-link">
-                {' '}
-                <span className="role-link__amp">&amp;</span>{' '}
-              </span>
-              <span className="role-chip role-chip--design">{profile.roles[1]}</span>
+            <span className="hero__role-a">{profile.roles[0]}</span>{' '}
+            <span className="hero__role-pair">
+              <span className="hero__amp">&amp;</span>{' '}
+              <span className="hero__role-b">{profile.roles[1]}</span>
             </span>
           </p>
           <p className="hero__intro">{profile.intro}</p>
@@ -131,6 +132,11 @@ export function Hero() {
             hotspots={PRISM_SPOTS}
           />
         </div>
+
+        <span className="hero__scroll" aria-hidden="true">
+          Scroll
+          <i />
+        </span>
 
         <ul className="hero__focus" aria-label="Focus areas">
           {profile.focus.map((f) => (

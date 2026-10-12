@@ -114,7 +114,7 @@ export function Demo() {
         <header className="section-head">
           <p className="kicker">Conversation design</p>
           <h2 id="demo-title" className="section-head__title">
-            How I shape a conversation.
+            How I shape a <em className="accent">conversation.</em>
           </h2>
           <p className="section-head__lead">
             Pick a scenario and steer it — including the wrong turns. It runs in your browser with sample data; no real tickets or systems are involved.

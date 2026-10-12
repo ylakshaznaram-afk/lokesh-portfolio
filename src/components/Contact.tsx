@@ -54,7 +54,7 @@ export function Contact() {
           />
           <p className="kicker">Contact</p>
           <h2 id="contact-title" className="contact__title">
-            Let’s make enterprise experiences feel simpler.
+            Let’s make enterprise experiences <em className="accent">feel simpler.</em>
           </h2>
           <p className="contact__lead">For roles, projects, or a conversation about Virtual Agent and ServiceNow work, email is the best way to reach me.</p>
           <div className="contact__actions">

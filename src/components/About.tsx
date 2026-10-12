@@ -7,7 +7,7 @@ export function About() {
         <div className="about__lead">
           <p className="kicker">About</p>
           <h2 id="about-title" className="about__title">
-            The developer behind the dialogue.
+            The developer behind <em className="accent">the dialogue.</em>
           </h2>
         </div>
         <div className="about__text reveal">
